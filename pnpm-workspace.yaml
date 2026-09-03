@@ -1,0 +1,16 @@
+allowBuilds:
+  '@parcel/watcher': true
+  better-sqlite3: true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  vue-demi: true
+publicHoistPattern:
+  - '*tailwind*'
+# The deploy build's pnpm enforces a 24h supply-chain minimum-release-age policy.
+# These two transitive deps had brand-new releases (<24h old) locked in, which
+# failed `pnpm i` in Docker. Pin them to the latest versions that pass the policy.
+# Safe to bump/remove once newer releases have aged past 24h.
+overrides:
+  baseline-browser-mapping: 2.11.17
+  seroval: 1.6.2
