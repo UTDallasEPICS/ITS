@@ -49,4 +49,4 @@ Track major changes, additions, or deprecations to the project scope.
 | 2026-08-23 | REQ-NF-07      | Pinned `better-auth@1.6.23` and `better-sqlite3@12.11.1` to keep the deploy build and migration Lambda working | @TusharW4ni | —           |
 | 2026-08-23 | REQ-NF-05      | Added `python3`/`make`/`g++` to the Docker builder so native modules compile         | @TusharW4ni | —           |
 | 2026-09-19 | REQ-F-08–12 | Added MVP project requirements for ticket submission, status tracking, NPTS access, GitHub issue integration, and EPICS access boundaries from the project brief | TBD | — |
-| 2026-09-19 | REQ-F-13–16 | Recorded later-scope ideas for debugging context, chat, product-userf
+| 2026-09-19 | REQ-F-13–16 | Recorded later-scope ideas for debugging context, chat, product-user tickets, and GitHub-based EPICS access | TBD | — |
