@@ -22,6 +22,15 @@ Use the matrix below to track requirements throughout the project lifecycle.
 | REQ-F-05  | Profile image is served with its `Content-Type` detected from file contents (magic bytes)        | Verified | 2026F           | `server/api/users/[id]/profile.get.ts`       |
 | REQ-F-06  | User-list endpoint returns only non-sensitive fields and never leaks image storage paths         | Verified | 2026F           | `server/api/users/index.get.ts`              |
 | REQ-F-07  | Unauthenticated `/api/health` endpoint returns HTTP 200 for load-balancer probes                 | Verified | 2026F           | `server/api/health.ts`                       |
+| REQ-F-08  | Project partners can submit tickets for their projects and check ticket status through ITS | Backlog | 2026F | GitHub issue: TBD |
+| REQ-F-09  | NPTS members can view all tickets and update ticket status | Backlog | 2026F | GitHub issue: TBD |
+| REQ-F-10  | EPICS students and mentors participate through GitHub issues without direct ITS access during the MVP | Backlog | 2026F | GitHub issue: TBD |
+| REQ-F-11  | An embeddable component lets project sites submit tickets through a script and site tag | Backlog | 2026F | GitHub issue: TBD |
+| REQ-F-12  | ITS tickets can be linked to GitHub issues for user-submitted tickets | Backlog | 2026F | GitHub issue: TBD |
+| REQ-F-13  | Ticket creation can capture local debugging context, such as console output, errors, current route, screenshots, and available server information, alongside the user's description | Deferred | TBD | GitHub issue: TBD |
+| REQ-F-14  | Project partners and NPTS developers can communicate through real-time chat | Deferred | TBD | GitHub issue: TBD |
+| REQ-F-15  | Product users can submit tickets through the web app for partner review before forwarding to NPTS | Deferred | TBD | GitHub issue: TBD |
+| REQ-F-16  | EPICS students and mentors can sign in with GitHub OAuth and receive ITS access based on write permission to ITS-managed repositories | Deferred | TBD | GitHub issue: TBD |
 | REQ-NF-01 | Persistence is type-safe: Drizzle ORM schema with generated Zod select/insert schemas            | Verified | 2026F           | `server/db/schema.ts`                        |
 | REQ-NF-02 | CI runs lint, type-check, and the Vitest suite on every PR and on `dev`/`stage`/`prod` pushes    | Verified | 2026F           | `.github/workflows/test.yml`                 |
 | REQ-NF-03 | Deploy pipeline order is build → migrate → push → deploy, so a failed migration never ships       | Verified | 2026F           | `.github/workflows/deploy.yml`               |
@@ -39,3 +48,5 @@ Track major changes, additions, or deprecations to the project scope.
 | 2026-08-23 | REQ-F/NF-\*    | Established the initial requirements register from the template baseline             | @TusharW4ni | —           |
 | 2026-08-23 | REQ-NF-07      | Pinned `better-auth@1.6.23` and `better-sqlite3@12.11.1` to keep the deploy build and migration Lambda working | @TusharW4ni | —           |
 | 2026-08-23 | REQ-NF-05      | Added `python3`/`make`/`g++` to the Docker builder so native modules compile         | @TusharW4ni | —           |
+| 2026-09-19 | REQ-F-08–12 | Added MVP project requirements for ticket submission, status tracking, NPTS access, GitHub issue integration, and EPICS access boundaries from the project brief | TBD | — |
+| 2026-09-19 | REQ-F-13–16 | Recorded later-scope ideas for debugging context, chat, product-userf
