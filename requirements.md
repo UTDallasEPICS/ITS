@@ -32,12 +32,15 @@ Use the matrix below to track requirements throughout the project lifecycle.
 | REQ-F-15  | Ticket creation can capture local debugging context, such as console output, errors, current route, screenshots, and available server information, alongside the user's description | Deferred | TBD             | GitHub issue: TBD                            |
 | REQ-F-16  | Project partners and NPTS developers can communicate through persistent real-time chat threads - persistent, not tied to a specific issue (MVP stretch goal) | Backlog  | 2026F           | GitHub issue: TBD                            |
 | REQ-F-17  | Chat supports rich text and media uploads to assist with debugging                               | Deferred | TBD             | GitHub issue: TBD                            |
-| REQ-F-18  | End users submitting tickets through in-site embeddable script can create temporary chat thread with NPTS developers tied to their ticket | Deferred | TBD             | GitHub issue: TBD                            |
+| REQ-F-18  | End users submitting tickets through in-site embeddable script can create temporary chat thread with NPTS developers tied to their ticket | Backlog  | 2026F           | GitHub issue: TBD                            |
 | REQ-F-19  | Product users can submit tickets through the web app for partner review before forwarding to NPTS | Deferred | TBD             | GitHub issue: TBD                            |
 | REQ-F-20  | EPICS students and mentors sign in to ITS with GitHub OAuth; ITS access is granted only when the user has write permission to the relevant ITS-managed GitHub repositories | Deferred | TBD - next semester, after initial MVP | GitHub issue: TBD |
 | REQ-F-21  | ITS access for EPICS students and mentors is provisioned automatically from GitHub repository permissions (e.g., periodic permission check), requiring no manual semester-based access grants | Deferred | TBD - next semester, after initial MVP | GitHub issue: TBD |
 | REQ-F-22  | ITS access for EPICS students and mentors is revoked automatically when GitHub repository access is lost (project departure or semester rollover), requiring no manual deprovisioning or cleanup | Deferred | TBD - next semester, after initial MVP | GitHub issue: TBD |
 | REQ-F-23  | Create documentation (public how to page, README, etc) on how to integrate the embeddable widget | Backlog | 2026F | GitHub issue: TBD |
+| REQ-F-24  | NPTS members can add NPTS members and project partners to ITS by email, so they can sign in (sign-in requires an existing user, REQ-F-01) | Backlog  | 2026F           | GitHub issue: TBD                            |
+| REQ-F-25  | NPTS members can remove a user, immediately revoking their ITS access and ending their active sessions | Backlog  | 2026F           | GitHub issue: TBD                            |
+| REQ-F-26  | NPTS members can set a user's role (NPTS member or project partner) and assign project partners to the projects whose tickets they can access | Backlog  | 2026F           | GitHub issue: TBD                            |
 | REQ-NF-01 | Persistence is type-safe: Drizzle ORM schema with generated Zod select/insert schemas            | Verified | 2026F           | `server/db/schema.ts`                        |
 | REQ-NF-02 | CI runs lint, type-check, and the Vitest suite on every PR and on `dev`/`stage`/`prod` pushes    | Verified | 2026F           | `.github/workflows/test.yml`                 |
 | REQ-NF-03 | Deploy pipeline order is build → migrate → push → deploy, so a failed migration never ships       | Verified | 2026F           | `.github/workflows/deploy.yml`               |
@@ -62,6 +65,8 @@ Track major changes, additions, or deprecations to the project scope.
 | 2026-09-22 | REQ-NF-08     | Added MVP access/communication constraint: only NPTS and project partners interface with ITS; EPICS participates via GitHub issues; ad-hoc partner communication stays on the Project Liaison | TBD         | —           |
 | 2026-09-22 | REQ-F-15–19   | Recorded brief context, the 2026-09-17 chat answer, lifecycle note, and auto-provisioning rationale in Scope Decisions & Notes | TBD         | —           |
 | 2026-09-22 | REQ-F-20–22   | Expanded GitHub-OAuth access scheme: permission-gated sign-in, automatic provisioning, and automatic deprovisioning synced to GitHub repo permissions — removes the manual semester provisioning/deprovisioning blocker | TBD         | —           |
+| 2026-09-25 | REQ-F-18      | Moved end-user chat from Deferred/TBD to Backlog/2026F: it must be at least roughly working this semester | Jason Antwi-Appah | —           |
+| 2026-09-25 | REQ-F-24–26   | Added user management: NPTS adds users, removes users, and sets roles and partner project assignments | Jason Antwi-Appah | —           |
 
 ## 3. Scope Decisions & Notes
 
