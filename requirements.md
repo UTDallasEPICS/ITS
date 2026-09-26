@@ -41,6 +41,7 @@ Use the matrix below to track requirements throughout the project lifecycle.
 | REQ-F-24  | NPTS members can add NPTS members and project partners to ITS by email, so they can sign in (sign-in requires an existing user, REQ-F-01) | Backlog  | 2026F           | GitHub issue: TBD                            |
 | REQ-F-25  | NPTS members can remove a user, immediately revoking their ITS access and ending their active sessions | Backlog  | 2026F           | GitHub issue: TBD                            |
 | REQ-F-26  | NPTS members can set a user's role (NPTS member or project partner) and assign project partners to the projects whose tickets they can access | Backlog  | 2026F           | GitHub issue: TBD                            |
+| REQ-F-27  | NPTS members can create and manage projects, including each project's partner organization, embeddable-widget site tag, and linked GitHub repository | Backlog  | 2026F           | GitHub issue: TBD                            |
 | REQ-NF-01 | Persistence is type-safe: Drizzle ORM schema with generated Zod select/insert schemas            | Verified | 2026F           | `server/db/schema.ts`                        |
 | REQ-NF-02 | CI runs lint, type-check, and the Vitest suite on every PR and on `dev`/`stage`/`prod` pushes    | Verified | 2026F           | `.github/workflows/test.yml`                 |
 | REQ-NF-03 | Deploy pipeline order is build → migrate → push → deploy, so a failed migration never ships       | Verified | 2026F           | `.github/workflows/deploy.yml`               |
@@ -67,6 +68,8 @@ Track major changes, additions, or deprecations to the project scope.
 | 2026-09-22 | REQ-F-20–22   | Expanded GitHub-OAuth access scheme: permission-gated sign-in, automatic provisioning, and automatic deprovisioning synced to GitHub repo permissions — removes the manual semester provisioning/deprovisioning blocker | TBD         | —           |
 | 2026-09-25 | REQ-F-18      | Moved end-user chat from Deferred/TBD to Backlog/2026F: it must be at least roughly working this semester | Jason Antwi-Appah | —           |
 | 2026-09-25 | REQ-F-24–26   | Added user management: NPTS adds users, removes users, and sets roles and partner project assignments | Jason Antwi-Appah | —           |
+| 2026-09-25 | REQ-F-27      | Added NPTS project management (partner organization, widget site tag, GitHub repository), which the widget and GitHub integration depend on | Jason Antwi-Appah | —           |
+| 2026-09-25 | REQ-F-14, REQ-F-18 | Recorded answers on end-user chat identity and when GitHub issues are created in Scope Decisions & Notes | Jason Antwi-Appah | —           |
 
 ## 3. Scope Decisions & Notes
 
@@ -88,6 +91,8 @@ constrain the requirements above.
 | Date       | Question                                                                                  | Answer | Affected Requirements |
 | ---------- | ----------------------------------------------------------------------------------------- | ------ | --------------------- |
 | 2026-09-17 | Should EPICS students be able to access chat (so they can talk to clients)? How/what does that look like? | No     | REQ-F-16 (chat scoped to project partners and NPTS developers only) |
+| 2026-09-25 | End users have no ITS account. How do they get back to a temporary chat? | A token stored in their browser. A temporary chat is one end user working with NPTS on one issue in one browser session; it is linked to a ticket but has its own lifecycle | REQ-F-18 |
+| 2026-09-25 | Is a GitHub issue created for every submitted ticket, or only after NPTS review? | Every submitted ticket | REQ-F-14 |
 
 ### 3.3 Decisions & constraints
 
