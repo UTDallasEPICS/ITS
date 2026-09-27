@@ -98,3 +98,4 @@ export const selectAccountSchema = createSelectSchema(account)
 export const insertAccountSchema = createInsertSchema(account)
 export const selectVerificationSchema = createSelectSchema(verification)
 export const insertVerificationSchema = createInsertSchema(verification)
+
