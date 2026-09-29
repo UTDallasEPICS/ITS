@@ -5,6 +5,7 @@ import { env } from './env'
 import { emailOTP } from 'better-auth/plugins/email-otp'
 import { organization } from 'better-auth/plugins/organization'
 import { admin } from 'better-auth/plugins/admin'
+import { ac, roles } from '#shared/access-control'
 import nodemailer from 'nodemailer'
 
 const transporter = nodemailer.createTransport({
@@ -32,7 +33,13 @@ export const auth = betterAuth({
         })
       },
     }),
-    organization(),
+    organization({
+      ac,
+      roles,
+      // Lets an organization define extra roles at runtime, stored in the
+      // `organizationRole` table and merged over `roles` on permission checks.
+      dynamicAccessControl: { enabled: true },
+    }),
     admin(),
   ],
 })
