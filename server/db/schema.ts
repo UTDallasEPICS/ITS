@@ -120,16 +120,6 @@ export const organizationRole = sqliteTable('organizationRole', {
   index('organizationRole_organizationId_idx').on(table.organizationId),
 ])
 
-export const tickets = sqliteTable('tickets', {
-  id: integer('id').primaryKey(),
-  projectId: text('projectId').notNull(),
-  title: text('title').notNull(),
-  status: text('status').notNull(),
-  userId: text('userId').notNull(),
-  description: text('description').notNull(),
-  timestamp: text('timestamp').notNull(),
-})
-
 export const project = sqliteTable('project', {
   id: integer('id').primaryKey(),
   name: text('name').notNull(),
@@ -144,6 +134,22 @@ export const project = sqliteTable('project', {
     .references(() => organization.id, { onDelete: 'cascade' }),
 }, (table) => [
   index('project_projectPartnerId_idx').on(table.projectPartnerId),
+])
+
+// Declared after `project` so the foreign key resolves in declaration order.
+export const tickets = sqliteTable('tickets', {
+  id: integer('id').primaryKey(),
+  // Matches `project.id`, which is an integer primary key.
+  projectId: integer('projectId')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  status: text('status').notNull(),
+  userId: text('userId').notNull(),
+  description: text('description').notNull(),
+  timestamp: text('timestamp').notNull(),
+}, (table) => [
+  index('tickets_projectId_idx').on(table.projectId),
 ])
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -169,7 +175,6 @@ export const organizationRelations = relations(organization, ({ many }) => ({
   projects: many(project),
   roles: many(organizationRole),
 }))
-
 export const memberRelations = relations(member, ({ one }) => ({
   organization: one(organization, {
     fields: [member.organizationId],
@@ -186,11 +191,16 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
   inviter: one(user, { fields: [invitation.inviterId], references: [user.id] }),
 }))
 
-export const projectRelations = relations(project, ({ one }) => ({
+export const projectRelations = relations(project, ({ one, many }) => ({
   projectPartner: one(organization, {
     fields: [project.projectPartnerId],
     references: [organization.id],
   }),
+  tickets: many(tickets),
+}))
+
+export const ticketsRelations = relations(tickets, ({ one }) => ({
+  project: one(project, { fields: [tickets.projectId], references: [project.id] }),
 }))
 
 export const organizationRoleRelations = relations(organizationRole, ({ one }) => ({
