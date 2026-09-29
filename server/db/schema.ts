@@ -83,6 +83,10 @@ export const member = sqliteTable('member', {
   role: text('role').notNull().default('member'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => [
+  // One membership per user per organization. The plugin rejects a duplicate
+  // with USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION; this is the backstop
+  // for concurrent requests.
+  uniqueIndex('member_organizationId_userId_unique').on(table.organizationId, table.userId),
   index('member_organizationId_idx').on(table.organizationId),
   index('member_userId_idx').on(table.userId),
 ])
@@ -145,11 +149,14 @@ export const tickets = sqliteTable('tickets', {
     .references(() => project.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   status: text('status').notNull(),
-  userId: text('userId').notNull(),
+  // Nullable with `set null`: a ticket is project work and outlives the account
+  // that submitted it. Deleting a user drops the attribution, not the ticket.
+  userId: text('userId').references(() => user.id, { onDelete: 'set null' }),
   description: text('description').notNull(),
   timestamp: text('timestamp').notNull(),
 }, (table) => [
   index('tickets_projectId_idx').on(table.projectId),
+  index('tickets_userId_idx').on(table.userId),
 ])
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -157,6 +164,7 @@ export const userRelations = relations(user, ({ many }) => ({
   accounts: many(account),
   members: many(member),
   invitations: many(invitation),
+  tickets: many(tickets),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -201,6 +209,7 @@ export const projectRelations = relations(project, ({ one, many }) => ({
 
 export const ticketsRelations = relations(tickets, ({ one }) => ({
   project: one(project, { fields: [tickets.projectId], references: [project.id] }),
+  user: one(user, { fields: [tickets.userId], references: [user.id] }),
 }))
 
 export const organizationRoleRelations = relations(organizationRole, ({ one }) => ({
