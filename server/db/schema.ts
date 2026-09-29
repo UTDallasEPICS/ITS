@@ -132,15 +132,18 @@ export const tickets = sqliteTable('tickets', {
 
 export const project = sqliteTable('project', {
   id: integer('id').primaryKey(),
-  githubLink: text('githubLink').notNull(),
-  orgName: text('orgName').notNull(),
-  projectPartnerId: text('projectPartnerId').notNull(),
-  projectName: text('projectName').notNull(),
-  organizationId: text('organizationId')
+  name: text('name').notNull(),
+  // GitHub's `full_name`, e.g. `UTDallasEPICS/ITS`. This is the form every REST
+  // endpoint is addressed by; there is no REST lookup by repository id.
+  githubRepo: text('githubRepo').notNull(),
+  // Points at the `organization` table, which represents a project partner. The
+  // export and table name stay `organization` for the Better Auth plugin, so
+  // this is the project's own name for the reference.
+  projectPartnerId: text('projectPartnerId')
     .notNull()
     .references(() => organization.id, { onDelete: 'cascade' }),
 }, (table) => [
-  index('project_organizationId_idx').on(table.organizationId),
+  index('project_projectPartnerId_idx').on(table.projectPartnerId),
 ])
 
 export const userRelations = relations(user, ({ many }) => ({
@@ -161,6 +164,8 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const organizationRelations = relations(organization, ({ many }) => ({
   members: many(member),
   invitations: many(invitation),
+  // An organization is a project partner; the table keeps the Better Auth
+  // model name, so this is where that vocabulary lives in the relations.
   projects: many(project),
   roles: many(organizationRole),
 }))
@@ -182,8 +187,8 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
 }))
 
 export const projectRelations = relations(project, ({ one }) => ({
-  organization: one(organization, {
-    fields: [project.organizationId],
+  projectPartner: one(organization, {
+    fields: [project.projectPartnerId],
     references: [organization.id],
   }),
 }))
