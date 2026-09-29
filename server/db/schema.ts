@@ -10,6 +10,10 @@ export const user = sqliteTable('user', {
   image: text('image'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  role: text('role'),
+  banned: integer('banned', { mode: 'boolean' }).notNull().default(false),
+  banReason: text('banReason'),
+  banExpires: integer('banExpires', { mode: 'timestamp' }),
 }, (table) => [
   uniqueIndex('user_email_unique').on(table.email),
 ])
@@ -24,6 +28,7 @@ export const session = sqliteTable('session', {
   userAgent: text('userAgent'),
   userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
   activeOrganizationId: text('activeOrganizationId'),
+  impersonatedBy: text('impersonatedBy'),
 }, (table) => [
   index('session_userId_idx').on(table.userId),
   uniqueIndex('session_token_unique').on(table.token),

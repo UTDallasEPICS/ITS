@@ -4,6 +4,7 @@ import { db } from './db'
 import { env } from './env'
 import { emailOTP } from 'better-auth/plugins/email-otp'
 import { organization } from 'better-auth/plugins/organization'
+import { admin } from 'better-auth/plugins/admin'
 import nodemailer from 'nodemailer'
 
 const transporter = nodemailer.createTransport({
@@ -32,5 +33,6 @@ export const auth = betterAuth({
       },
     }),
     organization(),
+    admin(),
   ],
 })
