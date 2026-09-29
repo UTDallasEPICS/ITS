@@ -17,8 +17,6 @@ type SeededUser = typeof schema.user.$inferSelect
 type SeededProjectPartner = typeof schema.organization.$inferSelect
 
 // Every step checks for an existing row first so the seed is safe to re-run.
-// `member` has no unique index on (organizationId, userId), so an
-// upsert-style insert would add a duplicate row on each run.
 async function seedUser(): Promise<SeededUser> {
   const existing = await db.query.user.findFirst({ where: (u, { eq }) => eq(u.email, USER_EMAIL) })
 
@@ -64,23 +62,26 @@ async function seedProjectPartner(): Promise<SeededProjectPartner> {
 }
 
 // The organization plugin grants the creator 'owner'; mirror that so the seeded
-// user passes membership checks against the seeded partner.
+// user passes membership checks against the seeded partner. The unique index on
+// (organizationId, userId) makes the insert a no-op when the row already exists.
 async function seedMembership(user: SeededUser, partner: SeededProjectPartner) {
-  const existing = await db.query.member.findFirst({
-    where: (m, { and, eq }) => and(eq(m.organizationId, partner.id), eq(m.userId, user.id)),
-  })
-
-  if (existing) {
-    console.log({ member: existing })
-    return
-  }
-
   const [created] = await db
     .insert(schema.member)
     .values({ organizationId: partner.id, userId: user.id, role: 'owner' })
+    .onConflictDoNothing()
     .returning()
 
-  console.log({ member: created })
+  const membership =
+    created ??
+    (await db.query.member.findFirst({
+      where: (m, { and, eq }) => and(eq(m.organizationId, partner.id), eq(m.userId, user.id)),
+    }))
+
+  if (!membership) {
+    throw new Error(`failed to seed membership for ${user.id} in ${partner.id}`)
+  }
+
+  console.log({ member: membership })
 }
 
 async function main() {
