@@ -15,6 +15,13 @@
       "when": 1790710234078,
       "tag": "0001_whole_slapstick",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790711233301,
+      "tag": "0002_steep_silver_sable",
+      "breakpoints": true
     }
   ]
 }
