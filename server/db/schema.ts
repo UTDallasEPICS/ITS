@@ -119,7 +119,12 @@ export const project = sqliteTable('project', {
   orgName: text('orgName').notNull(),
   projectPartnerId: text('projectPartnerId').notNull(),
   projectName: text('projectName').notNull(),
-})
+  organizationId: text('organizationId')
+    .notNull()
+    .references(() => organization.id, { onDelete: 'cascade' }),
+}, (table) => [
+  index('project_organizationId_idx').on(table.organizationId),
+])
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
@@ -139,6 +144,7 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const organizationRelations = relations(organization, ({ many }) => ({
   members: many(member),
   invitations: many(invitation),
+  projects: many(project),
 }))
 
 export const memberRelations = relations(member, ({ one }) => ({
@@ -155,6 +161,13 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
     references: [organization.id],
   }),
   inviter: one(user, { fields: [invitation.inviterId], references: [user.id] }),
+}))
+
+export const projectRelations = relations(project, ({ one }) => ({
+  organization: one(organization, {
+    fields: [project.organizationId],
+    references: [organization.id],
+  }),
 }))
 
 export const selectUserSchema = createSelectSchema(user)
