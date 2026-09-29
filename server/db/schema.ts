@@ -10,8 +10,6 @@ export const user = sqliteTable('user', {
   image: text('image'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  projectId: text('projectId').notNull(),
-  role: text('role').notNull(),
 }, (table) => [
   uniqueIndex('user_email_unique').on(table.email),
 ])
