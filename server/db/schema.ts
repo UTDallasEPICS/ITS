@@ -103,6 +103,23 @@ export const invitation = sqliteTable('invitation', {
   index('invitation_email_idx').on(table.email),
 ])
 
+// Dynamic access control: roles an organization defines at runtime, stored as a
+// JSON permission map and merged over the static `roles` on permission checks.
+// The export name must stay `organizationRole` -- the Drizzle adapter resolves
+// tables by the Better Auth model name, not the SQL table name.
+export const organizationRole = sqliteTable('organizationRole', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organizationId: text('organizationId')
+    .notNull()
+    .references(() => organization.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  permission: text('permission').notNull(),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' }),
+}, (table) => [
+  index('organizationRole_organizationId_idx').on(table.organizationId),
+])
+
 export const tickets = sqliteTable('tickets', {
   id: integer('id').primaryKey(),
   projectId: text('projectId').notNull(),
@@ -145,6 +162,7 @@ export const organizationRelations = relations(organization, ({ many }) => ({
   members: many(member),
   invitations: many(invitation),
   projects: many(project),
+  roles: many(organizationRole),
 }))
 
 export const memberRelations = relations(member, ({ one }) => ({
@@ -166,6 +184,13 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
 export const projectRelations = relations(project, ({ one }) => ({
   organization: one(organization, {
     fields: [project.organizationId],
+    references: [organization.id],
+  }),
+}))
+
+export const organizationRoleRelations = relations(organizationRole, ({ one }) => ({
+  organization: one(organization, {
+    fields: [organizationRole.organizationId],
     references: [organization.id],
   }),
 }))
@@ -195,6 +220,8 @@ export const selectMemberSchema = createSelectSchema(member)
 export const insertMemberSchema = createInsertSchema(member)
 export const selectInvitationSchema = createSelectSchema(invitation)
 export const insertInvitationSchema = createInsertSchema(invitation)
+export const selectOrganizationRoleSchema = createSelectSchema(organizationRole)
+export const insertOrganizationRoleSchema = createInsertSchema(organizationRole)
 export const selectProjectSchema = createSelectSchema(project)
 export const insertProjectSchema = createInsertSchema(project)
 export const selectTicketsSchema = createSelectSchema(tickets)
