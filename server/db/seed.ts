@@ -8,10 +8,13 @@ const sqlite = new Database(connectionString)
 const db = drizzle(sqlite, { schema })
 
 const USER_EMAIL = 'seeded-user@email.com'
-const ORG_SLUG = 'seeded-org'
+const PARTNER_SLUG = 'seeded-org'
+const PARTNER_NAME = 'Sample Seeded Project Partner'
 
 type SeededUser = typeof schema.user.$inferSelect
-type SeededOrganization = typeof schema.organization.$inferSelect
+// An organization is a project partner. The table keeps the Better Auth model
+// name, so the seed calls it by what it means here.
+type SeededProjectPartner = typeof schema.organization.$inferSelect
 
 // Every step checks for an existing row first so the seed is safe to re-run.
 // `member` has no unique index on (organizationId, userId), so an
@@ -37,34 +40,34 @@ async function seedUser(): Promise<SeededUser> {
   return created
 }
 
-async function seedOrganization(): Promise<SeededOrganization> {
+async function seedProjectPartner(): Promise<SeededProjectPartner> {
   const existing = await db.query.organization.findFirst({
-    where: (o, { eq }) => eq(o.slug, ORG_SLUG),
+    where: (o, { eq }) => eq(o.slug, PARTNER_SLUG),
   })
 
   if (existing) {
-    console.log({ organization: existing })
+    console.log({ projectPartner: existing })
     return existing
   }
 
   const [created] = await db
     .insert(schema.organization)
-    .values({ name: 'Sample Seeded Organization', slug: ORG_SLUG })
+    .values({ name: PARTNER_NAME, slug: PARTNER_SLUG })
     .returning()
 
   if (!created) {
-    throw new Error(`failed to seed organization ${ORG_SLUG}`)
+    throw new Error(`failed to seed project partner ${PARTNER_SLUG}`)
   }
 
-  console.log({ organization: created })
+  console.log({ projectPartner: created })
   return created
 }
 
 // The organization plugin grants the creator 'owner'; mirror that so the seeded
-// user passes membership checks against the seeded organization.
-async function seedMembership(user: SeededUser, organization: SeededOrganization) {
+// user passes membership checks against the seeded partner.
+async function seedMembership(user: SeededUser, partner: SeededProjectPartner) {
   const existing = await db.query.member.findFirst({
-    where: (m, { and, eq }) => and(eq(m.organizationId, organization.id), eq(m.userId, user.id)),
+    where: (m, { and, eq }) => and(eq(m.organizationId, partner.id), eq(m.userId, user.id)),
   })
 
   if (existing) {
@@ -74,7 +77,7 @@ async function seedMembership(user: SeededUser, organization: SeededOrganization
 
   const [created] = await db
     .insert(schema.member)
-    .values({ organizationId: organization.id, userId: user.id, role: 'owner' })
+    .values({ organizationId: partner.id, userId: user.id, role: 'owner' })
     .returning()
 
   console.log({ member: created })
@@ -84,9 +87,9 @@ async function main() {
   console.log('Start seeding...')
 
   const user = await seedUser()
-  const organization = await seedOrganization()
+  const partner = await seedProjectPartner()
 
-  await seedMembership(user, organization)
+  await seedMembership(user, partner)
 
   console.log('Seeding finished.')
 }

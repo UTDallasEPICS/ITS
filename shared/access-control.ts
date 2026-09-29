@@ -9,6 +9,9 @@ import {
 // The plugin's own statements (organization, member, invitation, team, ac) plus
 // the ITS domain resources, so an organization role can gate ticket and project
 // actions and not just membership management.
+//
+// The `organization` key is the Better Auth plugin's resource name for its own
+// org endpoints, so it stays even though a project partner is the domain term.
 const statement = {
   ...defaultStatements,
   ticket: ['create', 'read', 'update', 'delete'],
