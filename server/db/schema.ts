@@ -59,7 +59,7 @@ export const verification = sqliteTable('verification', {
   index('verification_identifier_idx').on(table.identifier),
 ])
 
-export const tickets = sqliteTable('Tickets', {
+export const tickets = sqliteTable('tickets', {
   id: integer('id').primaryKey(),
   projectId: text('projectId').notNull(),
   title: text('title').notNull(),
