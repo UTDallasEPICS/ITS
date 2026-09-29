@@ -170,11 +170,32 @@ export const projectRelations = relations(project, ({ one }) => ({
   }),
 }))
 
+// Select schemas mirror the table. Insert schemas omit the columns Better Auth
+// marks `input: false` (admin/ban state, active organization, impersonation) so
+// they cannot be set through a validated request body.
 export const selectUserSchema = createSelectSchema(user)
-export const insertUserSchema = createInsertSchema(user)
+export const insertUserSchema = createInsertSchema(user).omit({
+  role: true,
+  banned: true,
+  banReason: true,
+  banExpires: true,
+})
 export const selectSessionSchema = createSelectSchema(session)
-export const insertSessionSchema = createInsertSchema(session)
+export const insertSessionSchema = createInsertSchema(session).omit({
+  activeOrganizationId: true,
+  impersonatedBy: true,
+})
 export const selectAccountSchema = createSelectSchema(account)
 export const insertAccountSchema = createInsertSchema(account)
 export const selectVerificationSchema = createSelectSchema(verification)
 export const insertVerificationSchema = createInsertSchema(verification)
+export const selectOrganizationSchema = createSelectSchema(organization)
+export const insertOrganizationSchema = createInsertSchema(organization)
+export const selectMemberSchema = createSelectSchema(member)
+export const insertMemberSchema = createInsertSchema(member)
+export const selectInvitationSchema = createSelectSchema(invitation)
+export const insertInvitationSchema = createInsertSchema(invitation)
+export const selectProjectSchema = createSelectSchema(project)
+export const insertProjectSchema = createInsertSchema(project)
+export const selectTicketsSchema = createSelectSchema(tickets)
+export const insertTicketsSchema = createInsertSchema(tickets)
