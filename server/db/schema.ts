@@ -83,9 +83,6 @@ export const member = sqliteTable('member', {
   role: text('role').notNull().default('member'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => [
-  // One membership per user per organization. The plugin rejects a duplicate
-  // with USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION; this is the backstop
-  // for concurrent requests.
   uniqueIndex('member_organizationId_userId_unique').on(table.organizationId, table.userId),
   index('member_organizationId_idx').on(table.organizationId),
   index('member_userId_idx').on(table.userId),
@@ -107,10 +104,6 @@ export const invitation = sqliteTable('invitation', {
   index('invitation_email_idx').on(table.email),
 ])
 
-// Dynamic access control: roles an organization defines at runtime, stored as a
-// JSON permission map and merged over the static `roles` on permission checks.
-// The export name must stay `organizationRole` -- the Drizzle adapter resolves
-// tables by the Better Auth model name, not the SQL table name.
 export const organizationRole = sqliteTable('organizationRole', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   organizationId: text('organizationId')
@@ -127,12 +120,8 @@ export const organizationRole = sqliteTable('organizationRole', {
 export const project = sqliteTable('project', {
   id: integer('id').primaryKey(),
   name: text('name').notNull(),
-  // GitHub's `full_name`, e.g. `UTDallasEPICS/ITS`. This is the form every REST
-  // endpoint is addressed by; there is no REST lookup by repository id.
+  // repo `full_name`. ex: `UTDallasEPICS/ITS`
   githubRepo: text('githubRepo').notNull(),
-  // Points at the `organization` table, which represents a project partner. The
-  // export and table name stay `organization` for the Better Auth plugin, so
-  // this is the project's own name for the reference.
   projectPartnerId: text('projectPartnerId')
     .notNull()
     .references(() => organization.id, { onDelete: 'cascade' }),
@@ -140,17 +129,13 @@ export const project = sqliteTable('project', {
   index('project_projectPartnerId_idx').on(table.projectPartnerId),
 ])
 
-// Declared after `project` so the foreign key resolves in declaration order.
 export const tickets = sqliteTable('tickets', {
   id: integer('id').primaryKey(),
-  // Matches `project.id`, which is an integer primary key.
   projectId: integer('projectId')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   status: text('status').notNull(),
-  // Nullable with `set null`: a ticket is project work and outlives the account
-  // that submitted it. Deleting a user drops the attribution, not the ticket.
   userId: text('userId').references(() => user.id, { onDelete: 'set null' }),
   description: text('description').notNull(),
   timestamp: text('timestamp').notNull(),
@@ -178,8 +163,6 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const organizationRelations = relations(organization, ({ many }) => ({
   members: many(member),
   invitations: many(invitation),
-  // An organization is a project partner; the table keeps the Better Auth
-  // model name, so this is where that vocabulary lives in the relations.
   projects: many(project),
   roles: many(organizationRole),
 }))
@@ -219,9 +202,6 @@ export const organizationRoleRelations = relations(organizationRole, ({ one }) =
   }),
 }))
 
-// Select schemas mirror the table. Insert schemas omit the columns Better Auth
-// marks `input: false` (admin/ban state, active organization, impersonation) so
-// they cannot be set through a validated request body.
 export const selectUserSchema = createSelectSchema(user)
 export const insertUserSchema = createInsertSchema(user).omit({
   role: true,

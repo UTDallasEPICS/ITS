@@ -36,8 +36,6 @@ export const auth = betterAuth({
     organization({
       ac,
       roles,
-      // Lets an organization define extra roles at runtime, stored in the
-      // `organizationRole` table and merged over `roles` on permission checks.
       dynamicAccessControl: { enabled: true },
     }),
     admin(),
