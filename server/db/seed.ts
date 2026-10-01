@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import Database from 'better-sqlite3'
+import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
 
@@ -61,36 +62,18 @@ async function seedProjectPartner(): Promise<SeededProjectPartner> {
   return created
 }
 
-// The organization plugin grants the creator 'owner'; mirror that so the seeded
-// user passes membership checks against the seeded partner. The unique index on
-// (organizationId, userId) makes the insert a no-op when the row already exists.
-async function seedMembership(user: SeededUser, partner: SeededProjectPartner) {
-  const [created] = await db
-    .insert(schema.member)
-    .values({ organizationId: partner.id, userId: user.id, role: 'owner' })
-    .onConflictDoNothing()
-    .returning()
-
-  const membership =
-    created ??
-    (await db.query.member.findFirst({
-      where: (m, { and, eq }) => and(eq(m.organizationId, partner.id), eq(m.userId, user.id)),
-    }))
-
-  if (!membership) {
-    throw new Error(`failed to seed membership for ${user.id} in ${partner.id}`)
-  }
-
-  console.log({ member: membership })
-}
-
 async function main() {
   console.log('Start seeding...')
 
   const user = await seedUser()
   const partner = await seedProjectPartner()
 
-  await seedMembership(user, partner)
+  // Point the seeded user at the partner, which is what makes them an org user
+  // rather than a global admin (orgId null).
+  if (user.orgId !== partner.id) {
+    await db.update(schema.user).set({ orgId: partner.id }).where(eq(schema.user.id, user.id))
+    console.log({ user: { ...user, orgId: partner.id } })
+  }
 
   console.log('Seeding finished.')
 }
