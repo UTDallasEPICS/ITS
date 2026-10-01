@@ -3,9 +3,6 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from './db'
 import { env } from './env'
 import { emailOTP } from 'better-auth/plugins/email-otp'
-import { organization } from 'better-auth/plugins/organization'
-import { admin } from 'better-auth/plugins/admin'
-import { ac, roles } from '#shared/access-control'
 import nodemailer from 'nodemailer'
 
 const transporter = nodemailer.createTransport({
@@ -33,11 +30,5 @@ export const auth = betterAuth({
         })
       },
     }),
-    organization({
-      ac,
-      roles,
-      dynamicAccessControl: { enabled: true },
-    }),
-    admin(),
   ],
 })
