@@ -9,7 +9,6 @@ const sqlite = new Database(connectionString)
 const db = drizzle(sqlite, { schema })
 
 const USER_EMAIL = 'seeded-user@email.com'
-const PARTNER_SLUG = 'seeded-org'
 const PARTNER_NAME = 'Sample Seeded Project Partner'
 
 type SeededUser = typeof schema.user.$inferSelect
@@ -41,7 +40,7 @@ async function seedUser(): Promise<SeededUser> {
 
 async function seedProjectPartner(): Promise<SeededProjectPartner> {
   const existing = await db.query.organization.findFirst({
-    where: (o, { eq }) => eq(o.slug, PARTNER_SLUG),
+    where: (o, { eq }) => eq(o.name, PARTNER_NAME),
   })
 
   if (existing) {
@@ -51,11 +50,11 @@ async function seedProjectPartner(): Promise<SeededProjectPartner> {
 
   const [created] = await db
     .insert(schema.organization)
-    .values({ name: PARTNER_NAME, slug: PARTNER_SLUG })
+    .values({ name: PARTNER_NAME })
     .returning()
 
   if (!created) {
-    throw new Error(`failed to seed project partner ${PARTNER_SLUG}`)
+    throw new Error(`failed to seed project partner ${PARTNER_NAME}`)
   }
 
   console.log({ projectPartner: created })

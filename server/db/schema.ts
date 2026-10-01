@@ -3,17 +3,14 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 // A project partner. Declared before `user` so `user.orgId` resolves in
-// declaration order.
+// declaration order. The `slug` and `logo` columns were organization-plugin
+// fields for URL routing and are gone with the plugin.
 export const organization = sqliteTable('organization', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
-  slug: text('slug').notNull(),
-  logo: text('logo'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => [
-  uniqueIndex('organization_slug_unique').on(table.slug),
-])
+})
 
 export const user = sqliteTable('user', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
