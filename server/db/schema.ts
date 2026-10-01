@@ -139,9 +139,11 @@ export const tickets = sqliteTable('tickets', {
   userId: text('userId').references(() => user.id, { onDelete: 'set null' }),
   description: text('description').notNull(),
   timestamp: text('timestamp').notNull(),
+  githubIssueId: text('githubIssueId'),
 }, (table) => [
   index('tickets_projectId_idx').on(table.projectId),
   index('tickets_userId_idx').on(table.userId),
+  uniqueIndex('tickets_githubIssueId_unique').on(table.githubIssueId),
 ])
 
 export const userRelations = relations(user, ({ many }) => ({
