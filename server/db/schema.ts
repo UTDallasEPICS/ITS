@@ -1,21 +1,32 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
-import { createSelectSchema, createInsertSchema } from 'drizzle-zod'
 import { relations } from 'drizzle-orm'
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
-export const user = sqliteTable('user', {
+export const organization = sqliteTable('organization', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull().default(false),
-  image: text('image'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 })
 
+export const user = sqliteTable('user', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull().default(false),
+  image: text('image'),
+  createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  orgId: text('orgId').references(() => organization.id),
+}, (table) => [
+  uniqueIndex('user_email_unique').on(table.email),
+  index('user_orgId_idx').on(table.orgId),
+])
+
 export const session = sqliteTable('session', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   expiresAt: integer('expiresAt', { mode: 'timestamp' }).notNull(),
-  token: text('token').notNull().unique(),
+  token: text('token').notNull(),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   ipAddress: text('ipAddress'),
@@ -23,6 +34,7 @@ export const session = sqliteTable('session', {
   userId: text('userId').notNull().references(() => user.id, { onDelete: 'cascade' }),
 }, (table) => [
   index('session_userId_idx').on(table.userId),
+  uniqueIndex('session_token_unique').on(table.token),
 ])
 
 export const account = sqliteTable('account', {
@@ -54,9 +66,40 @@ export const verification = sqliteTable('verification', {
   index('verification_identifier_idx').on(table.identifier),
 ])
 
-export const userRelations = relations(user, ({ many }) => ({
+export const project = sqliteTable('project', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+  // repo `full_name`. ex: `UTDallasEPICS/ITS`
+  githubRepo: text('githubRepo').notNull(),
+  projectPartnerId: text('projectPartnerId')
+    .notNull()
+    .references(() => organization.id, { onDelete: 'cascade' }),
+}, (table) => [
+  index('project_projectPartnerId_idx').on(table.projectPartnerId),
+])
+
+export const tickets = sqliteTable('tickets', {
+  id: integer('id').primaryKey(),
+  projectId: integer('projectId')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  status: text('status').notNull(),
+  userId: text('userId').references(() => user.id, { onDelete: 'set null' }),
+  description: text('description').notNull(),
+  timestamp: text('timestamp').notNull(),
+  githubIssueId: text('githubIssueId'),
+}, (table) => [
+  index('tickets_projectId_idx').on(table.projectId),
+  index('tickets_userId_idx').on(table.userId),
+  uniqueIndex('tickets_githubIssueId_unique').on(table.githubIssueId),
+])
+
+export const userRelations = relations(user, ({ one, many }) => ({
+  org: one(organization, { fields: [user.orgId], references: [organization.id] }),
   sessions: many(session),
   accounts: many(account),
+  tickets: many(tickets),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -67,6 +110,24 @@ export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, { fields: [account.userId], references: [user.id] }),
 }))
 
+export const organizationRelations = relations(organization, ({ many }) => ({
+  users: many(user),
+  projects: many(project),
+}))
+
+export const projectRelations = relations(project, ({ one, many }) => ({
+  projectPartner: one(organization, {
+    fields: [project.projectPartnerId],
+    references: [organization.id],
+  }),
+  tickets: many(tickets),
+}))
+
+export const ticketsRelations = relations(tickets, ({ one }) => ({
+  project: one(project, { fields: [tickets.projectId], references: [project.id] }),
+  user: one(user, { fields: [tickets.userId], references: [user.id] }),
+}))
+
 export const selectUserSchema = createSelectSchema(user)
 export const insertUserSchema = createInsertSchema(user)
 export const selectSessionSchema = createSelectSchema(session)
@@ -75,3 +136,9 @@ export const selectAccountSchema = createSelectSchema(account)
 export const insertAccountSchema = createInsertSchema(account)
 export const selectVerificationSchema = createSelectSchema(verification)
 export const insertVerificationSchema = createInsertSchema(verification)
+export const selectOrganizationSchema = createSelectSchema(organization)
+export const insertOrganizationSchema = createInsertSchema(organization)
+export const selectProjectSchema = createSelectSchema(project)
+export const insertProjectSchema = createInsertSchema(project)
+export const selectTicketsSchema = createSelectSchema(tickets)
+export const insertTicketsSchema = createInsertSchema(tickets)
