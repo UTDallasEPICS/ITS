@@ -2,9 +2,6 @@ import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
-// A project partner. Declared before `user` so `user.orgId` resolves in
-// declaration order. The `slug` and `logo` columns were organization-plugin
-// fields for URL routing and are gone with the plugin.
 export const organization = sqliteTable('organization', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
@@ -20,10 +17,6 @@ export const user = sqliteTable('user', {
   image: text('image'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  // The user's partner, or null for a global admin -- that null is the entire
-  // role model, so there is no role column. No onDelete: SET NULL would promote
-  // every ex-member to global admin if a partner were deleted, and CASCADE
-  // would delete its users. NO ACTION blocks deleting a partner still in use.
   orgId: text('orgId').references(() => organization.id),
 }, (table) => [
   uniqueIndex('user_email_unique').on(table.email),
@@ -135,8 +128,6 @@ export const ticketsRelations = relations(tickets, ({ one }) => ({
   user: one(user, { fields: [tickets.userId], references: [user.id] }),
 }))
 
-// Insert schemas no longer omit anything: the only columns that ever needed
-// omitting were the plugins' `input: false` fields.
 export const selectUserSchema = createSelectSchema(user)
 export const insertUserSchema = createInsertSchema(user)
 export const selectSessionSchema = createSelectSchema(session)
