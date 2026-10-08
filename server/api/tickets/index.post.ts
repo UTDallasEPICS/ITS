@@ -24,26 +24,30 @@ export default defineEventHandler(async (event) => {
   // Keep the current membership check, project check and insert together so
   // access cannot change between checking ownership and writing the ticket.
   const ticket = db.transaction((tx) => {
-    const partner = tx
+    const currentUser = tx
       .select({ orgId: user.orgId })
       .from(user)
       .where(eq(user.id, sessionUser.id))
       .get()
 
-    if (!partner?.orgId) {
-      throw createError({ statusCode: 403, statusMessage: 'Partner organization required' })
+    if (!currentUser) {
+      throw createError({ statusCode: 403, statusMessage: 'Account access unavailable' })
     }
 
-    const ownedProject = tx
+    const accessibleProject = tx
       .select({ id: project.id })
       .from(project)
       .where(
-        and(eq(project.id, result.data.projectId), eq(project.projectPartnerId, partner.orgId))
+        and(
+          eq(project.id, result.data.projectId),
+          // NPTS can submit for any project; partners remain organization-scoped.
+          currentUser.orgId === null ? undefined : eq(project.projectPartnerId, currentUser.orgId)
+        )
       )
       .get()
 
     // Use the same response for missing and inaccessible projects.
-    if (!ownedProject) {
+    if (!accessibleProject) {
       throw createError({ statusCode: 404, statusMessage: 'Project not found' })
     }
 

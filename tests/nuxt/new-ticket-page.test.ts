@@ -97,11 +97,11 @@ describe('new ticket page', () => {
     expect(projectState.refresh).toHaveBeenCalledOnce()
   })
 
-  it('explains missing partner access', async () => {
+  it('explains unavailable account access without requiring an organization', async () => {
     projectState.status.value = 'error'
     projectState.error.value = { statusCode: 403 }
     await flushPromises()
-    expect(wrapper.get('[role="alert"]').text()).toContain('needs a partner organization')
+    expect(wrapper.get('[role="alert"]').text()).toContain('Your account access is unavailable')
     expect(wrapper.find('form').exists()).toBe(false)
   })
 

@@ -7,18 +7,23 @@ import { requireUser } from '../../utils/session'
 export default defineEventHandler(async (event) => {
   const sessionUser = requireUser(event)
   // Read the current assignment from the database, never from request parameters.
-  const partner = await db.query.user.findFirst({
+  const currentUser = await db.query.user.findFirst({
     where: eq(user.id, sessionUser.id),
     columns: { orgId: true },
   })
 
-  if (!partner?.orgId) {
-    throw createError({ statusCode: 403, statusMessage: 'Partner organization required' })
+  if (!currentUser) {
+    throw createError({ statusCode: 403, statusMessage: 'Account access unavailable' })
   }
 
-  return db
-    .select({ id: project.id, name: project.name })
-    .from(project)
-    .where(eq(project.projectPartnerId, partner.orgId))
-    .orderBy(asc(project.name), asc(project.id))
+  return (
+    db
+      .select({ id: project.id, name: project.name })
+      .from(project)
+      // Existing users with orgId null are NPTS; partners have an organization.
+      .where(
+        currentUser.orgId === null ? undefined : eq(project.projectPartnerId, currentUser.orgId)
+      )
+      .orderBy(asc(project.name), asc(project.id))
+  )
 })

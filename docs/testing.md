@@ -335,10 +335,17 @@ users and projects to verify organization access. They never load `.env`, open
 `dev.db`, start a server, or send email. These tests supply the session identity
 normally set by middleware; they do not test Better Auth's login or cookie handling.
 
+The OTP access tests (`tests/nuxt/auth-signup.test.ts`) exercise the real auth
+handler and authentication middleware with an in-memory database, dummy environment
+values and a mocked mail transport. They sign in provisioned NPTS and partner users,
+then use the returned session cookies against the actual project and ticket handlers.
+They verify organization access, revoked/invalid sessions, assignment changes and
+blocked automatic signup. These are in-process integration tests, not browser tests.
+No email is delivered and no local account is changed.
+
 This baseline **does not** cover:
 
-- Authentication flows, OTP, or email delivery
-- Full authentication middleware and database-backed session integration
+- Real email delivery or browser-based authentication flows
 - File uploads
 - Playwright / browser end-to-end journeys (intentionally separate — NPTS)
 - Deployment or production behavior

@@ -1,15 +1,22 @@
 # Partner ticket API
 
 From the dashboard, choose **New ticket** to open `/tickets/new`. The page loads
-the partner's projects and submits the reusable form to the ticket API. On success
+the user's accessible projects and submits the reusable form to the ticket API. On success
 it shows the saved ticket number and status; on failure it keeps the draft for retry.
 **Submit another ticket** starts a fresh form after a successful save.
 
 These endpoints require the session provided by the existing authentication middleware.
-They read the user's current organization from the database. A user without an
-organization receives HTTP 403; this API does not provide NPTS-wide project access.
+They read the current user from the database. An existing user with `orgId: null`
+is an NPTS member and can access all projects. A user with an organization is a
+partner and can access only projects belonging to that organization. Missing user
+records receive HTTP 403; signed-out requests receive HTTP 401.
 
-- `GET /api/projects`: returns the partner organization's project IDs and names, sorted by name.
+OTP self-registration is disabled: accounts must be provisioned before sign-in.
+Newly provisioned accounts default to NPTS: omitting `orgId` from a database insert
+stores `NULL`. Assign partners an organization when provisioning them to restrict
+their access. The endpoints never accept a role or organization from the caller.
+
+- `GET /api/projects`: returns accessible project IDs and names, sorted by name.
 - `POST /api/tickets`: accepts a JSON object containing only `projectId` (a positive
   integer), `title`, and `description` (nonblank strings). Text is trimmed before saving.
   Returns HTTP 201 with the saved ticket. The server assigns its author from the session,

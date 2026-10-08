@@ -14,7 +14,7 @@
 
   const projectErrorMessage = computed(() => {
     if (error.value?.statusCode === 403) {
-      return 'Your account needs a partner organization. Contact your NPTS team for access.'
+      return 'Your account access is unavailable. Contact your NPTS team for help.'
     }
     if (error.value?.statusCode === 401) {
       return 'Your session has expired. Sign in again to load your projects.'

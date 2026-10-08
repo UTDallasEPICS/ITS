@@ -57,7 +57,7 @@ describe('GET /api/projects', () => {
       .values([
         { id: 'partner-a', name: 'Partner A', email: 'a@example.com', orgId: 'org-a' },
         { id: 'partner-b', name: 'Partner B', email: 'b@example.com', orgId: 'org-b' },
-        { id: 'unassigned', name: 'Unassigned', email: 'none@example.com' },
+        { id: 'npts', name: 'NPTS Member', email: 'npts@example.com', orgId: null },
         { id: 'empty', name: 'Empty', email: 'empty@example.com', orgId: 'org-empty' },
       ])
       .run()
@@ -110,8 +110,26 @@ describe('GET /api/projects', () => {
     expect(await response.json()).toEqual([{ id: 3, name: 'Private B' }])
   })
 
-  it('rejects users without a partner organization instead of listing all projects', async () => {
-    const response = await request({ ...sessionUser, id: 'unassigned' })
+  it('lists all organizations’ projects for an existing NPTS user with no org', async () => {
+    const response = await request({ ...sessionUser, id: 'npts' })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual([
+      { id: 2, name: 'Alpha' },
+      { id: 3, name: 'Private B' },
+      { id: 1, name: 'Zebra' },
+    ])
+  })
+
+  it('restricts a former NPTS user after assignment to a partner organization', async () => {
+    db.update(user).set({ orgId: 'org-b' }).where(eq(user.id, 'npts')).run()
+    const response = await request({ ...sessionUser, id: 'npts' })
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual([{ id: 3, name: 'Private B' }])
+  })
+
+  it('does not mistake a deleted NPTS account for a user with a null org', async () => {
+    db.delete(user).where(eq(user.id, 'npts')).run()
+    const response = await request({ ...sessionUser, id: 'npts' })
     expect(response.status).toBe(403)
   })
 

@@ -77,7 +77,7 @@ describe('POST /api/tickets', () => {
       .values([
         { id: 'partner-a', name: 'Partner A', email: 'a@example.com', orgId: 'org-a' },
         { id: 'partner-b', name: 'Partner B', email: 'b@example.com', orgId: 'org-b' },
-        { id: 'unassigned', name: 'Unassigned', email: 'none@example.com' },
+        { id: 'npts', name: 'NPTS Member', email: 'npts@example.com', orgId: null },
       ])
       .run()
     db.insert(project)
@@ -128,10 +128,41 @@ describe('POST /api/tickets', () => {
     expectNoTickets()
   })
 
-  it('rejects users without a partner organization', async () => {
-    const response = await request(validTicket, { ...sessionUser, id: 'unassigned' })
+  it.each([1, 2])('allows NPTS to submit to project %i across organizations', async (projectId) => {
+    const response = await request({ ...validTicket, projectId }, { ...sessionUser, id: 'npts' })
+    expect(response.status).toBe(201)
+    expect(db.select().from(tickets).get()).toMatchObject({
+      projectId,
+      userId: 'npts',
+      status: 'open',
+    })
+  })
+
+  it('still rejects a nonexistent project for NPTS', async () => {
+    const response = await request(
+      { ...validTicket, projectId: 999 },
+      { ...sessionUser, id: 'npts' }
+    )
+    expect(response.status).toBe(404)
+    expectNoTickets()
+  })
+
+  it('does not grant deleted NPTS accounts access', async () => {
+    db.delete(user).where(eq(user.id, 'npts')).run()
+    const response = await request(validTicket, { ...sessionUser, id: 'npts' })
     expect(response.status).toBe(403)
     expectNoTickets()
+  })
+
+  it('restricts a former NPTS user after assignment to a partner organization', async () => {
+    db.update(user).set({ orgId: 'org-b' }).where(eq(user.id, 'npts')).run()
+    const rejected = await request(validTicket, { ...sessionUser, id: 'npts' })
+    expect(rejected.status).toBe(404)
+    expectNoTickets()
+
+    const accepted = await request({ ...validTicket, projectId: 2 }, { ...sessionUser, id: 'npts' })
+    expect(accepted.status).toBe(201)
+    expect(db.select().from(tickets).get()).toMatchObject({ projectId: 2, userId: 'npts' })
   })
 
   it('rejects a session identity whose user has been deleted', async () => {
