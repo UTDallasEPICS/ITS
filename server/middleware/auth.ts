@@ -2,7 +2,7 @@ import { auth } from '~~/server/utils/auth'
 
 // API paths that must stay reachable without a session. Better Auth's own
 // endpoints (sign-in, email OTP, get-session, etc.) live under /api/auth.
-const PUBLIC_PREFIXES = ['/api/auth', '/api/health']
+const PUBLIC_PREFIXES = ['/api/auth', '/api/health', '/api/widget']
 
 // Make the resolved session available to every downstream handler so routes
 // can read event.context.user / event.context.session instead of calling
