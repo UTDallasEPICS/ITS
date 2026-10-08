@@ -1,4 +1,4 @@
-import type { H3Event } from 'h3'
+import { createError, type H3Event } from 'h3'
 
 // Returns the session user attached by the auth gateway (server/middleware/auth.ts).
 // Throws 401 if it is absent, so protected routes get a typed, non-null user
