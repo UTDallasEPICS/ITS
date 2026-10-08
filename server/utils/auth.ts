@@ -16,11 +16,15 @@ const transporter = nodemailer.createTransport({
 })
 
 export const auth = betterAuth({
+  baseURL: env.BETTER_AUTH_URL,
+  secret: env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, {
     provider: 'sqlite',
   }),
   plugins: [
     emailOTP({
+      // Only provisioned users may sign in: a new user without an org would be NPTS.
+      disableSignUp: true,
       async sendVerificationOTP({ email, otp }) {
         await transporter.sendMail({
           from: env.EMAIL_FROM,

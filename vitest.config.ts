@@ -2,7 +2,7 @@ import { defineVitestConfig } from '@nuxt/test-utils/config'
 
 // Vitest baseline for the template. Tests run in the Nuxt environment so they
 // can render real components with auto-imports, NuxtLink, and Nuxt UI, but they
-// never start a server or touch a database — see docs/testing.md.
+// never start a server or touch a persistent database — see docs/testing.md.
 export default defineVitestConfig({
   test: {
     environment: 'nuxt',

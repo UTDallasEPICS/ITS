@@ -17,6 +17,7 @@ export const user = sqliteTable('user', {
   image: text('image'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  // Omitted orgId defaults to NULL in SQLite: NPTS access. Set an org for partners.
   orgId: text('orgId').references(() => organization.id),
 }, (table) => [
   uniqueIndex('user_email_unique').on(table.email),
