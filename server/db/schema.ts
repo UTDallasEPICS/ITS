@@ -1,6 +1,6 @@
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 export const organization = sqliteTable('organization', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -95,6 +95,52 @@ export const tickets = sqliteTable('tickets', {
   uniqueIndex('tickets_githubIssueId_unique').on(table.githubIssueId),
 ])
 
+export const chatThreads = sqliteTable('chat_threads', {
+  id: integer('id').primaryKey(),
+  projectId: integer('projectId')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', {mode: 'timestamp'}),
+  closedAt: integer('closed_at', {mode: 'timestamp'}),
+}, (table) => [
+  index('chat_threads_projectId_idx').on(table.projectId),
+])
+
+export const chatThreadMessages = sqliteTable('chat_thread_messages', {
+  id: integer('id').primaryKey(),
+  createdAt: integer('created_at', { mode: 'timestamp' }),
+  threadId: integer('thread_id').references(() => chatThreads.id).notNull(),
+  userId: integer('user_id').references(() => user.id).notNull(),
+  plainTextBody: text("plain_text_body").notNull()
+}, (table) => [
+  index('chat_thread_messages_pagination_idx').on(table.threadId, table.id)
+])
+
+export const chatThreadMembers = sqliteTable('chat_thread_members', {
+  threadId: integer('thread_id').references(() => chatThreads.id).notNull(),
+  userId: integer('user_id').references(() => user.id).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }),
+}, (table) => [
+  primaryKey({columns: [table.threadId, table.userId]}),
+  index('chat_thread_members_user_idx').on(table.userId)
+])
+
+export const chatThreadRelations = relations(chatThreads, ({ one, many }) => ({
+  members: many(chatThreadMembers),
+  project: one(project, {fields: [chatThreads.projectId], references: [project.id]}),
+  messages: many(chatThreadMessages)
+}))
+
+export const chatThreadMemberRelations = relations(chatThreadMembers, ({ one }) => ({
+  user: one(user, { fields: [chatThreadMembers.userId], references: [user.id] }),
+  thread: one(chatThreads, {fields: [chatThreadMembers.threadId], references: [chatThreads.id]})
+}))
+
+export const chatThreadMessageRelations = relations(chatThreadMessages, ({ one }) => ({
+  user: one(user, { fields: [chatThreadMessages.userId], references: [user.id] }),
+  thread: one(chatThreads, {fields: [chatThreadMessages.threadId], references: [chatThreads.id]})
+}))
+
 export const userRelations = relations(user, ({ one, many }) => ({
   org: one(organization, { fields: [user.orgId], references: [organization.id] }),
   sessions: many(session),
@@ -142,3 +188,10 @@ export const selectProjectSchema = createSelectSchema(project)
 export const insertProjectSchema = createInsertSchema(project)
 export const selectTicketsSchema = createSelectSchema(tickets)
 export const insertTicketsSchema = createInsertSchema(tickets)
+
+export const selectChatThreadsSchema = createSelectSchema(chatThreads)
+export const insertChatThreadsSchema = createInsertSchema(chatThreads)
+export const selectChatThreadMessagesSchema = createSelectSchema(chatThreadMessages)
+export const insertChatThreadMessagesSchema = createInsertSchema(chatThreadMessages)
+export const selectChatThreadMembersSchema = createSelectSchema(chatThreadMembers)
+export const insertChatThreadMembersSchema = createInsertSchema(chatThreadMembers)
