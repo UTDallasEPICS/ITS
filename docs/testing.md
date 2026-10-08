@@ -327,10 +327,18 @@ just to get green does not count.
 
 ## Limitations of this baseline
 
+The projects and tickets API tests (`tests/nuxt/projects-api.test.ts` and
+`tests/nuxt/tickets-api.test.ts`) override the environment
+to Node and replace the database connection with disposable, in-memory SQLite.
+They apply the existing migrations to that memory database and use fictional
+users and projects to verify organization access. They never load `.env`, open
+`dev.db`, start a server, or send email. These tests supply the session identity
+normally set by middleware; they do not test Better Auth's login or cookie handling.
+
 This baseline **does not** cover:
 
 - Authentication flows, OTP, or email delivery
-- Database-backed sessions or protected routes
+- Full authentication middleware and database-backed session integration
 - File uploads
 - Playwright / browser end-to-end journeys (intentionally separate — NPTS)
 - Deployment or production behavior

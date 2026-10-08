@@ -81,10 +81,11 @@
       <div>
         <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Dashboard</h1>
         <p class="mt-1 text-gray-500 dark:text-gray-400">
-          Manage your application users and settings.
+          Manage your application users and settings, or submit a project ticket.
         </p>
       </div>
-      <div class="flex justify-between gap-4 md:items-center">
+      <div class="flex flex-wrap justify-between gap-4 md:items-center">
+        <UButton to="/tickets/new">New ticket</UButton>
         <UModal :open="isModalOpen">
           <UButton
             color="success"
