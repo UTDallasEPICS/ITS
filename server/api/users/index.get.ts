@@ -8,6 +8,7 @@ export default defineEventHandler(async (event) => {
   // guard
   const currentUser = requireUser(event)
   await requireAdmin(currentUser.id)
+  await requireProjectAccess(currentUser.id, 1) // Example project ID for testing
 
   const users = await db
     .select({
