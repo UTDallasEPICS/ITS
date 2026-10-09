@@ -71,6 +71,13 @@
       "when": 1791493963200,
       "tag": "0009_simple_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1791578026622,
+      "tag": "0010_tricky_marten_broadcloak",
+      "breakpoints": true
     }
   ]
 }
