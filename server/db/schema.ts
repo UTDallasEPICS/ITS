@@ -100,7 +100,7 @@ export const chatThreads = sqliteTable('chat_threads', {
   projectId: integer('projectId')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at', {mode: 'timestamp'}),
+  createdAt: integer('created_at', {mode: 'timestamp'}).notNull().$defaultFn(() => new Date()),
   closedAt: integer('closed_at', {mode: 'timestamp'}),
 }, (table) => [
   index('chat_threads_projectId_idx').on(table.projectId),
@@ -108,9 +108,9 @@ export const chatThreads = sqliteTable('chat_threads', {
 
 export const chatThreadMessages = sqliteTable('chat_thread_messages', {
   id: integer('id').primaryKey(),
-  createdAt: integer('created_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   threadId: integer('thread_id').references(() => chatThreads.id).notNull(),
-  userId: integer('user_id').references(() => user.id).notNull(),
+  userId: text('user_id').references(() => user.id).notNull(),
   plainTextBody: text("plain_text_body").notNull()
 }, (table) => [
   index('chat_thread_messages_pagination_idx').on(table.threadId, table.id)
@@ -118,8 +118,8 @@ export const chatThreadMessages = sqliteTable('chat_thread_messages', {
 
 export const chatThreadMembers = sqliteTable('chat_thread_members', {
   threadId: integer('thread_id').references(() => chatThreads.id).notNull(),
-  userId: integer('user_id').references(() => user.id).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }),
+  userId: text('user_id').references(() => user.id).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => [
   primaryKey({columns: [table.threadId, table.userId]}),
   index('chat_thread_members_user_idx').on(table.userId)
