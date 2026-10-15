@@ -25,3 +25,5 @@ logs
 
 /prisma/generated
 /dev.db
+
+/public/widget
