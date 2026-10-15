@@ -61,8 +61,23 @@ async function seedProjectPartner(): Promise<SeededProjectPartner> {
   return created
 }
 
+// Signup is disabled, so a fresh deploy needs one real account to log in with.
+// The migration Lambda passes SEED_* vars from the env file; orgId stays null,
+// which gives this user NPTS (global) access.
+async function seedAdmin(email: string) {
+  await db
+    .insert(schema.user)
+    .values({ email, name: 'NPTS Admin' })
+    .onConflictDoNothing({ target: schema.user.email })
+  console.log({ admin: email })
+}
+
 async function main() {
   console.log('Start seeding...')
+
+  if (process.env.SEED_ADMIN_EMAIL) {
+    await seedAdmin(process.env.SEED_ADMIN_EMAIL)
+  }
 
   const user = await seedUser()
   const partner = await seedProjectPartner()
