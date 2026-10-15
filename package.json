@@ -20,7 +20,8 @@
     "db:seed": "tsx server/db/seed.ts",
     "db:push": "drizzle-kit push",
     "build:widget": "vite build --config widget/vite.config.ts",
-    "dev:widget": "vite build --config widget/vite.config.ts --watch"
+    "dev:widget": "vite build --config widget/vite.config.ts --watch",
+    "sample-site": "npx serve sample-site -l 4000"
   },
   "dependencies": {
     "@nuxt/image": "2.1.0",
