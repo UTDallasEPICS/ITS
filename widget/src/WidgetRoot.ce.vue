@@ -1,21 +1,29 @@
 <script setup lang="ts">
   import { ref } from 'vue'
+  // Shared component that lives in the main ITS app (app/components/shared).
+  // Importing it here proves UI code can be reused in the widget.
+  import StatusPill from '../../app/components/shared/StatusPill.vue'
 
   // Values passed in from main.ts (site-tag="..." becomes siteTag)
   const props = defineProps<{ siteTag: string; apiBase: string }>()
 
   const open = ref(false)
-  const status = ref('Not checked yet')
+  const state = ref<'idle' | 'loading' | 'ok' | 'error'>('idle')
+  const detail = ref('')
 
-  // Same request as widget-test.js, now inside Vue
+  // Same request as before, now drives the shared StatusPill
   async function checkConnection() {
-    status.value = 'Connecting...'
+    state.value = 'loading'
+    detail.value = ''
     try {
       const res = await fetch(`${props.apiBase}/api/health?siteTag=${props.siteTag}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
-      status.value = `Connected to ITS (site tag: ${props.siteTag}, time: ${data.timestamp})`
+      state.value = 'ok'
+      detail.value = `site tag: ${props.siteTag}, time: ${data.timestamp}`
     } catch (err) {
-      status.value = `Connection failed: ${String(err)}`
+      state.value = 'error'
+      detail.value = String(err)
     }
   }
 
@@ -32,7 +40,8 @@
         <strong>Report an issue</strong>
         <button class="close" @click="open = false">×</button>
       </div>
-      <p class="status">{{ status }}</p>
+      <StatusPill :state="state" />
+      <p class="status">{{ detail }}</p>
       <!-- #20: the shared ticket form goes here -->
     </div>
     <button class="launcher" @click="toggle">?</button>

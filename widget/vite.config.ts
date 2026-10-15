@@ -6,7 +6,13 @@ import vue from '@vitejs/plugin-vue'
 // Output lands in public/, so Nuxt serves it at /widget/v1/its-widget.js
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
-  plugins: [vue()],
+  plugins: [
+    vue({
+      // Compile every SFC (including shared ones imported from app/) in
+      // custom-element mode so their <style> is injected into the shadow root
+      features: { customElement: true },
+    }),
+  ],
   // Library builds don't replace this automatically; Vue needs it
   define: { 'process.env.NODE_ENV': JSON.stringify('production') },
   build: {
