@@ -1,4 +1,4 @@
-# ADR 002: Real Time Chat
+# ADR 003: Real Time Chat
 
 - **Status:** Proposed
 - **Deciders:** Jason, Tushar

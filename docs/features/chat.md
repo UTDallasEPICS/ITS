@@ -10,4 +10,4 @@ detail what tables we use and why
 
 ## How does real-time messaging work?
 
-[This ADR](docs/adr/002_real_time_chat.md) details other approaches we considered for this.
+[This ADR](../adr/003_real_time_chat.md) details other approaches we considered for this.
