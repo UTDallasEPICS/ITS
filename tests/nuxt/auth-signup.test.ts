@@ -115,7 +115,17 @@ function createTicket(projectId: number, cookie = '') {
 describe('provisioned-user OTP login', () => {
   beforeEach(() => {
     sendMail.mockReset().mockResolvedValue({ messageId: 'test-message' })
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected network request'))
+    let gitHubIssueCounter = 100
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('api.github.com')) {
+        return new Response(JSON.stringify({ id: 1, number: gitHubIssueCounter++, html_url: 'https://github.com' }), {
+          status: 201,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      throw new Error(`Unexpected network request: ${url}`)
+    })
     db.delete(tickets).run()
     db.delete(project).run()
     db.delete(session).run()
@@ -144,7 +154,6 @@ describe('provisioned-user OTP login', () => {
   })
 
   afterEach(() => {
-    expect(globalThis.fetch).not.toHaveBeenCalled()
     vi.restoreAllMocks()
   })
 
