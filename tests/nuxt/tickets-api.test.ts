@@ -18,6 +18,36 @@ vi.mock('../../server/utils/db', async () => {
 migrate(db, { migrationsFolder: './drizzle' })
 db.$client.pragma('foreign_keys = ON')
 
+// Stub $fetch so the handler never reaches GitHub.
+const { mockFetch, resetIssueNumber } = vi.hoisted(() => {
+  let issueNum = 100
+  const fn = vi.fn(async () => ({
+    id: 99999,
+    number: issueNum++,
+    html_url: 'https://github.com/example/a/issues/100',
+  }))
+  const mockFetch = Object.assign(fn, {
+    create: vi.fn(() => fn),
+    raw: vi.fn(),
+    native: vi.fn(),
+  })
+  return {
+    mockFetch,
+    resetIssueNumber: () => { issueNum = 100 },
+  }
+})
+
+vi.stubGlobal('$fetch', mockFetch)
+vi.mock('ofetch', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('ofetch')>()
+  return {
+    ...actual,
+    $fetch: mockFetch,
+    ofetch: mockFetch,
+    default: mockFetch,
+  }
+})
+
 const sessionUser: NonNullable<H3EventContext['user']> = {
   id: 'partner-a',
   name: 'Test Partner',
@@ -63,6 +93,8 @@ function expectNoTickets() {
 
 describe('POST /api/tickets', () => {
   beforeEach(() => {
+    resetIssueNumber()
+    mockFetch.mockClear()
     db.delete(tickets).run()
     db.delete(project).run()
     db.delete(user).run()
@@ -105,7 +137,7 @@ describe('POST /api/tickets', () => {
       userId: 'partner-a',
       status: 'open',
       timestamp: expect.any(String),
-      githubIssueId: null,
+      githubIssueId: expect.any(String),
     })
     expect(Date.parse(created.timestamp)).toBeGreaterThanOrEqual(beforeRequest)
     expect(Date.parse(created.timestamp)).toBeLessThanOrEqual(Date.now())
