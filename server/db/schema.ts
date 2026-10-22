@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
-import z from 'zod'
+import type z from 'zod'
 
 export const organization = sqliteTable('organization', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
