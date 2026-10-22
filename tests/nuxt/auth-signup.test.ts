@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, createError, defineEventHandler, toWebHandler } from 'h3'
+import { createApp, createRouter, createError, defineEventHandler, toWebHandler } from 'h3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { eq } from 'drizzle-orm'
 import {
@@ -16,6 +16,9 @@ import { db } from '../../server/utils/db'
 import { auth } from '../../server/utils/auth'
 import projectsHandler from '../../server/api/projects/index.get'
 import ticketsHandler from '../../server/api/tickets/index.post'
+import listHandler from '../../server/api/tickets/index.get'
+import detailHandler from '../../server/api/tickets/[id].get'
+import editHandler from '../../server/api/tickets/[id].patch'
 
 const { sendMail } = vi.hoisted(() => ({ sendMail: vi.fn() }))
 
@@ -67,7 +70,12 @@ beforeAll(async () => {
   const app = createApp()
   app.use(authMiddleware)
   app.use('/api/projects', projectsHandler)
-  app.use('/api/tickets', ticketsHandler)
+  const router = createRouter()
+  router.post('/api/tickets', ticketsHandler)
+  router.get('/api/tickets', listHandler)
+  router.get('/api/tickets/:id', detailHandler)
+  router.patch('/api/tickets/:id', editHandler)
+  app.use(router)
   protectedRequest = toWebHandler(app)
 })
 
@@ -283,5 +291,37 @@ describe('provisioned-user OTP login', () => {
     expect(await projects.json()).toEqual([{ id: 1, name: 'Project A' }])
     expect((await createTicket(2, cookie)).status).toBe(404)
     expect((await createTicket(1, cookie)).status).toBe(201)
+  })
+  it('supports the signed-in partner create/list/detail/edit journey with real session cookies', async () => {
+    const partnerCookie = await login('partner@example.com')
+    const nptsCookie = await login('npts@example.com')
+    const own = await (await createTicket(1, partnerCookie)).json()
+    const foreign = await (await createTicket(2, nptsCookie)).json()
+    const read = (path: string, cookie = partnerCookie) =>
+      protectedRequest(
+        new Request(`http://localhost:3000/api/tickets${path}`, { headers: { cookie } })
+      )
+    expect((await (await read('')).json()).map((row: { id: number }) => row.id)).toEqual([own.id])
+    expect((await read(`/${foreign.id}`)).status).toBe(404)
+    expect((await read(`/${own.id}`)).status).toBe(200)
+    const edited = await protectedRequest(
+      new Request(`http://localhost:3000/api/tickets/${own.id}`, {
+        method: 'PATCH',
+        headers: { cookie: partnerCookie, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Updated through the API',
+          description: 'Saved after sign-in.',
+        }),
+      })
+    )
+    expect(edited.status).toBe(200)
+    expect(await (await read(`/${own.id}`)).json()).toMatchObject({
+      title: 'Updated through the API',
+    })
+    expect(await (await read('', nptsCookie)).json()).toHaveLength(2)
+    for (const path of ['', `/${own.id}`]) expect((await read(path, '')).status).toBe(401)
+    db.delete(session).where(eq(session.userId, 'partner')).run()
+    expect((await read('')).status).toBe(401)
+    expect((await read(`/${own.id}`)).status).toBe(401)
   })
 })

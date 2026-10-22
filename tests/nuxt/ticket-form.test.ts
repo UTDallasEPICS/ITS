@@ -118,4 +118,23 @@ describe('TicketForm', () => {
     await submit()
     expect(wrapper.emitted('submit')).toHaveLength(1)
   })
+  it('supports a fixed widget project without a selector or project list', async () => {
+    await wrapper.setProps({ projects: [], projectId: 12 })
+    expect(wrapper.findComponent(USelect).exists()).toBe(false)
+    await wrapper.get('input').setValue('Widget issue')
+    await wrapper.get('textarea').setValue('Submitted from a project site.')
+    await submit()
+    expect(wrapper.emitted('submit')).toEqual([
+      [{ projectId: 12, title: 'Widget issue', description: 'Submitted from a project site.' }],
+    ])
+  })
+
+  it('shows a parent error and preserves the draft when disabled', async () => {
+    await fillForm()
+    await wrapper.setProps({ error: 'Please retry.', disabled: true })
+    expect(wrapper.get('[role="alert"]').text()).toBe('Please retry.')
+    await submit()
+    expect(wrapper.emitted('submit')).toBeUndefined()
+    expect(wrapper.get<HTMLInputElement>('input').element.value).toContain('Contact form')
+  })
 })

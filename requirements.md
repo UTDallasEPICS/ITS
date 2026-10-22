@@ -22,8 +22,8 @@ Use the matrix below to track requirements throughout the project lifecycle.
 | REQ-F-05  | Profile image is served with its `Content-Type` detected from file contents (magic bytes)        | Verified | 2026F           | `server/api/users/[id]/profile.get.ts`       |
 | REQ-F-06  | User-list endpoint returns only non-sensitive fields and never leaks image storage paths         | Verified | 2026F           | `server/api/users/index.get.ts`              |
 | REQ-F-07  | Unauthenticated `/api/health` endpoint returns HTTP 200 for load-balancer probes                 | Verified | 2026F           | `server/api/health.ts`                       |
-| REQ-F-08  | Project partners can check ticket status through ITS                                             | Backlog  | 2026F           | GitHub issue: TBD                            |
-| REQ-F-09  | Project partners can submit tickets for their projects                                           | Backlog  | 2026F           | GitHub issue: TBD                            |
+| REQ-F-08  | Project partners can check ticket status through ITS                                             | In-progress | 2026F           | [#35](https://github.com/UTDallasEPICS/ITS/issues/35)                            |
+| REQ-F-09  | Project partners can submit tickets for their projects                                           | In-progress | 2026F           | [#35](https://github.com/UTDallasEPICS/ITS/issues/35)                            |
 | REQ-F-10  | NPTS members can view all tickets                                                                | Backlog  | 2026F           | GitHub issue: TBD                            |
 | REQ-F-11  | NPTS members can update ticket status                                                            | Backlog  | 2026F           | GitHub issue: TBD                            |
 | REQ-F-12  | EPICS students and mentors participate through GitHub issues without direct ITS access during the MVP | Backlog  | 2026F           | GitHub issue: TBD                            |
@@ -70,6 +70,11 @@ Track major changes, additions, or deprecations to the project scope.
 | 2026-09-25 | REQ-F-24–26   | Added user management: NPTS adds users, removes users, and sets roles and partner project assignments | Jason Antwi-Appah | —           |
 | 2026-09-25 | REQ-F-27      | Added NPTS project management (partner organization, widget site tag, GitHub repository), which the widget and GitHub integration depend on | Jason Antwi-Appah | —           |
 | 2026-09-25 | REQ-F-14, REQ-F-18 | Recorded answers on end-user chat identity and when GitHub issues are created in Scope Decisions & Notes | Jason Antwi-Appah | —           |
+
+Partner ticket implementation evidence (2026-10-22): shared create/list/detail/content-edit
+routes, organization scoping and UI tests are in place. REQ-F-08/09 remain In-progress
+until the owner demonstration and integration review are recorded; see
+[partner ticket handoff](docs/partner-tickets.md).
 
 ## 3. Scope Decisions & Notes
 
