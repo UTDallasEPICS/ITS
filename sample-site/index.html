@@ -2,6 +2,25 @@
 <html lang="en">
   <body>
     <h1>Sample Partner Site</h1>
-    <script src="http://localhost:3000/widget-test.js" data-site-tag="sample-site-tag"></script>
+    <script
+      src="http://localhost:3000/widget/v1/its-widget.js"
+      data-site-tag="sample-site-tag"
+      defer
+    ></script>
   </body>
+  <style>
+    /* Deliberately aggressive host styles: the widget should NOT pick these up */
+    body {
+      font-family: Georgia, serif;
+      background: #fdf6e3;
+    }
+    button {
+      background: hotpink !important;
+      font-size: 30px;
+    }
+    p {
+      color: purple;
+    }
+  </style>
+  <button>Host page button</button>
 </html>

@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
+    "build": "pnpm build:widget && nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -19,6 +19,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx server/db/seed.ts",
     "db:push": "drizzle-kit push",
+    "build:widget": "vite build --config widget/vite.config.ts",
+    "dev:widget": "vite build --config widget/vite.config.ts --watch",
     "sample-site": "npx serve sample-site -l 4000"
   },
   "dependencies": {
@@ -38,6 +40,7 @@
     "@nuxt/eslint": "^1.17.0",
     "@nuxt/test-utils": "^4.1.0",
     "@types/better-sqlite3": "^9.6.0",
+    "@vitejs/plugin-vue": "6.0.8",
     "@vue/test-utils": "^2.4.11",
     "better-sqlite3": "12.11.1",
     "drizzle-kit": "^0.31.10",
@@ -49,6 +52,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3",
+    "vite": "8.2.2",
     "vitest": "^4.1.11",
     "vue-tsc": "^3.3.11"
   }
