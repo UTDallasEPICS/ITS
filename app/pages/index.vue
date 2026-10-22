@@ -85,6 +85,7 @@
         </p>
       </div>
       <div class="flex flex-wrap justify-between gap-4 md:items-center">
+        <UButton to="/tickets" variant="outline">View tickets</UButton>
         <UButton to="/tickets/new">New ticket</UButton>
         <UModal :open="isModalOpen">
           <UButton
