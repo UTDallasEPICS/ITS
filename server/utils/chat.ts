@@ -130,6 +130,28 @@ type PaginateThreadMessagesOutput = {
 
 const THREAD_PAGE_MAX = 25
 
+const threadExists = (threadId: number): boolean => {
+  const threadRecord = db
+    .select({ id: chatThreads.id })
+    .from(chatThreads)
+    .where(eq(chatThreads.id, threadId))
+    .limit(1)
+    .get()
+
+  return !!threadRecord
+}
+
+const messageBelongsToThread = (messageId: number, threadId: number): boolean => {
+  const messageRecord = db
+    .select({ id: chatThreadMessages.id })
+    .from(chatThreadMessages)
+    .where(and(eq(chatThreadMessages.id, messageId), eq(chatThreadMessages.threadId, threadId)))
+    .limit(1)
+    .get()
+
+  return !!messageRecord
+} 
+
 export const paginateThreadMessages = async (data: PaginateThreadMessagesInput): Promise<PaginateThreadMessagesOutput> => {
   if (data.pageSize !== undefined) {
     if (data.pageSize <= 0) throw new Error("page size must be at least 1")
@@ -138,7 +160,13 @@ export const paginateThreadMessages = async (data: PaginateThreadMessagesInput):
   
   const resolvedPageSize = data.pageSize ?? THREAD_PAGE_MAX
 
-  // TODO: enforce that startMessageId belongs to this thread... this could be a security risk i think
+  if (!threadExists(data.threadId)) {
+    throw new Error("Thread does not exist")
+  }
+
+  if (data.startMessageId !== undefined && !messageBelongsToThread(data.startMessageId, data.threadId)) {
+    throw new Error("Invalid cursor")
+  }
 
   const messages = await db.query.chatThreadMessages.findMany({
     where: (message, builder) => builder.and(
