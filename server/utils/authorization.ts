@@ -7,7 +7,7 @@ function isAdmin(orgId: string | null) {
   return orgId === null
 }
 
-async function getUserOrgId(userId: string) {
+export async function getUserOrgId(userId: string) {
   const [foundUser] = await db.select({ orgId: user.orgId }).from(user).where(eq(user.id, userId))
   if (!foundUser) {
     throw createError({

@@ -50,17 +50,6 @@ export const findOpenThreadWithThisSetOfMembers = (
   )
 }
 
-export const userIsMemberOfThread = (userId: string, threadId: number): boolean => {
-  const membershipRecord = db
-    .select({ userId: chatThreadMembers.userId })
-    .from(chatThreadMembers)
-    .where(and(eq(chatThreadMembers.userId, userId), eq(chatThreadMembers.threadId, threadId)))
-    .limit(1)
-    .get()
-
-  return !!membershipRecord
-}
-
 export const threadExists = (threadId: number): boolean => {
   const threadRecord = db
     .select({ id: chatThreads.id })
