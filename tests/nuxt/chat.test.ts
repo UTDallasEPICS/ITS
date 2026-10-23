@@ -147,14 +147,21 @@ return { thread, messages }
 describe('paginateThreadMessages', () => {
   it('returns an empty page for a thread without messages', async () => {
     const { thread } = seedMessages(0)
-    expect(await paginateThreadMessages({ threadId: thread.id })).toEqual({
+    expect(await paginateThreadMessages({ threadId: thread.id, direction: 'latest' })).toEqual({
       messages: [], metadata: { hasMore: false },
     })
   })
 
-  it('defaults to 25 messages and reports when more exist', async () => {
+  it('defaults to the newest 25 messages when reading latest', async () => {
     const { thread, messages } = seedMessages(26)
-    expect(await paginateThreadMessages({ threadId: thread.id })).toEqual({
+    expect(await paginateThreadMessages({ threadId: thread.id, direction: 'latest' })).toEqual({
+      messages: messages.slice(1), metadata: { hasMore: true },
+    })
+  })
+
+  it('defaults to the oldest 25 messages when reading oldest', async () => {
+    const { thread, messages } = seedMessages(26)
+    expect(await paginateThreadMessages({ threadId: thread.id, direction: 'oldest' })).toEqual({
       messages: messages.slice(0, 25), metadata: { hasMore: true },
     })
   })
@@ -165,27 +172,33 @@ describe('paginateThreadMessages', () => {
     const rows = db.insert(chatThreadMessages).values([30, 10, 20].map(id => ({
       id, threadId: thread.id, userId: 'a', plainTextBody: `Message ${id}`,
     }))).returning().all()
-    const result = await paginateThreadMessages({ threadId: thread.id, pageSize: 2 })
+    const result = await paginateThreadMessages({
+      threadId: thread.id, direction: 'latest', pageSize: 2,
+    })
     expect(result).toEqual({
-      messages: rows.sort((a, b) => a.id - b.id).slice(0, 2), metadata: { hasMore: true },
+      messages: rows.sort((a, b) => a.id - b.id).slice(1), metadata: { hasMore: true },
     })
   })
 
   it('reports no more messages when the page exactly fits', async () => {
     const { thread, messages } = seedMessages(2)
-    expect(await paginateThreadMessages({ threadId: thread.id, pageSize: 2 })).toEqual({
+    expect(await paginateThreadMessages({
+      threadId: thread.id, direction: 'latest', pageSize: 2,
+    })).toEqual({
       messages, metadata: { hasMore: false },
     })
   })
 
-  it('uses an exclusive cursor and reaches the final partial page without gaps or duplicates', async () => {
+  it('walks forward to the final partial page without gaps or duplicates', async () => {
     const { thread, messages } = seedMessages(5)
-    const first = await paginateThreadMessages({ threadId: thread.id, pageSize: 2 })
+    const first = await paginateThreadMessages({
+      threadId: thread.id, direction: 'oldest', pageSize: 2,
+    })
     const second = await paginateThreadMessages({
-      threadId: thread.id, pageSize: 2, startMessageId: first.messages.at(-1)!.id,
+      threadId: thread.id, direction: 'oldest', pageSize: 2, cursorMessageId: first.messages.at(-1)!.id,
     })
     const last = await paginateThreadMessages({
-      threadId: thread.id, pageSize: 2, startMessageId: second.messages.at(-1)!.id,
+      threadId: thread.id, direction: 'oldest', pageSize: 2, cursorMessageId: second.messages.at(-1)!.id,
     })
     expect([...first.messages, ...second.messages, ...last.messages]).toEqual(messages)
     expect([first.metadata.hasMore, second.metadata.hasMore, last.metadata.hasMore]).toEqual([
@@ -194,10 +207,35 @@ describe('paginateThreadMessages', () => {
     expect(last.messages).toHaveLength(1)
   })
 
-  it('returns an empty page after the last message', async () => {
+  it('walks backward from the newest message to the first page', async () => {
+    const { thread, messages } = seedMessages(5)
+    const newest = await paginateThreadMessages({
+      threadId: thread.id, direction: 'latest', pageSize: 2,
+    })
+    const middle = await paginateThreadMessages({
+      threadId: thread.id, direction: 'latest', pageSize: 2, cursorMessageId: newest.messages[0]!.id,
+    })
+    const oldest = await paginateThreadMessages({
+      threadId: thread.id, direction: 'latest', pageSize: 2, cursorMessageId: middle.messages[0]!.id,
+    })
+    expect([...oldest.messages, ...middle.messages, ...newest.messages]).toEqual(messages)
+    expect([newest.metadata.hasMore, middle.metadata.hasMore, oldest.metadata.hasMore]).toEqual([
+      true, true, false,
+    ])
+    expect(oldest.messages).toHaveLength(1)
+  })
+
+  it('returns an empty page after the last message when reading forward', async () => {
     const { thread, messages } = seedMessages(2)
     expect(await paginateThreadMessages({
-      threadId: thread.id, startMessageId: messages.at(-1)!.id,
+      threadId: thread.id, direction: 'oldest', cursorMessageId: messages.at(-1)!.id,
+    })).toEqual({ messages: [], metadata: { hasMore: false } })
+  })
+
+  it('returns an empty page before the first message when reading backward', async () => {
+    const { thread, messages } = seedMessages(2)
+    expect(await paginateThreadMessages({
+      threadId: thread.id, direction: 'latest', cursorMessageId: messages[0]!.id,
     })).toEqual({ messages: [], metadata: { hasMore: false } })
   })
 
@@ -205,19 +243,21 @@ describe('paginateThreadMessages', () => {
     const { thread } = seedMessages(2)
     const other = seedMessages(1)
     await expect(paginateThreadMessages({
-      threadId: thread.id, startMessageId: other.messages[0]!.id,
+      threadId: thread.id, direction: 'latest', cursorMessageId: other.messages[0]!.id,
     })).rejects.toThrow()
   })
 
   it('rejects a nonexistent cursor', async () => {
     const { thread } = seedMessages(2)
     await expect(paginateThreadMessages({
-      threadId: thread.id, startMessageId: 999,
+      threadId: thread.id, direction: 'oldest', cursorMessageId: 999,
     })).rejects.toThrow()
   })
 
   it.each([0, -1, 26])('rejects an out-of-range page size of %s', async pageSize => {
     const { thread } = seedMessages(1)
-    await expect(paginateThreadMessages({ threadId: thread.id, pageSize })).rejects.toThrow()
+    await expect(paginateThreadMessages({
+      threadId: thread.id, direction: 'latest', pageSize,
+    })).rejects.toThrow()
   })
 })

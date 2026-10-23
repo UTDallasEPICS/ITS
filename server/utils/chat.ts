@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import {
   chatThreadMembers,
   chatThreadMessages,
@@ -115,9 +115,24 @@ export const sendMessage = async (data: insertChatThreadMessagesSchema) => {
 }
 
 
+/**
+ * Which end of a thread a page is read from.
+ *
+ * `latest` reads backwards from the newest message: it is what a reader sees
+ * when opening a thread. `oldest` reads forwards from the start of the thread,
+ * which is what catch-up and transcript export need.
+ *
+ * Pages are always returned in ascending id order, and `hasMore` refers to the
+ * next page in the direction that was read.
+ */
+export const CHAT_PAGE_DIRECTIONS = ['latest', 'oldest'] as const
+
+export type ChatPageDirection = (typeof CHAT_PAGE_DIRECTIONS)[number]
+
 type PaginateThreadMessagesInput = {
   threadId: selectChatThreadMessagesSchema["threadId"]
-  startMessageId?: selectChatThreadMessagesSchema["id"]
+  direction: ChatPageDirection
+  cursorMessageId?: selectChatThreadMessagesSchema["id"]
   pageSize?: number
 }
 
@@ -164,25 +179,32 @@ export const paginateThreadMessages = async (data: PaginateThreadMessagesInput):
     throw new Error("Thread does not exist")
   }
 
-  if (data.startMessageId !== undefined && !messageBelongsToThread(data.startMessageId, data.threadId)) {
+  if (data.cursorMessageId !== undefined && !messageBelongsToThread(data.cursorMessageId, data.threadId)) {
     throw new Error("Invalid cursor")
   }
 
-  const messages = await db.query.chatThreadMessages.findMany({
+  const readingForward = data.direction === 'oldest'
+
+  const rows = await db.query.chatThreadMessages.findMany({
     where: (message, builder) => builder.and(
       builder.eq(message.threadId, data.threadId),
-      data.startMessageId !== undefined ? builder.gt(message.id, data.startMessageId) : undefined,
+      data.cursorMessageId === undefined
+        ? undefined
+        : readingForward
+          ? builder.gt(message.id, data.cursorMessageId)
+          : builder.lt(message.id, data.cursorMessageId),
     ),
     limit: resolvedPageSize + 1,
-    orderBy: chatThreadMessages.id
+    orderBy: readingForward ? chatThreadMessages.id : desc(chatThreadMessages.id)
   })
 
-  const hasMore = !!messages[resolvedPageSize]
-  if (hasMore) {
-    messages.pop()
-  }
+  // The extra row only tells us whether another page exists in the direction we
+  // are reading, so it never reaches the caller.
+  const hasMore = rows.length > resolvedPageSize
+  const page = hasMore ? rows.slice(0, resolvedPageSize) : rows
+
   return {
-    messages, metadata: {
+    messages: readingForward ? page : [...page].reverse(), metadata: {
      hasMore
     }
   }
