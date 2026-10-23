@@ -4,6 +4,12 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxt/ui', '@nuxt/image', '@nuxt/eslint'],
   css: ['./assets/css/main.css'],
+  experimental: {
+    // Typed router: navigateTo, <NuxtLink>, router.push() and useRoute().
+    typedPages: true,
+    // Better TypeScript DX via the @dxup/nuxt module.
+    typescriptPlugin: true,
+  },
   // Prettier owns formatting; ESLint handles logic only (no stylistic rules).
   eslint: {
     config: {
