@@ -17,6 +17,11 @@ export default defineNuxtConfig({
   typescript: {
     typeCheck: process.env.NODE_ENV !== 'production',
   },
+  nitro: {
+    experimental: {
+      websocket: true,
+    },
+  },
   vite: {
     optimizeDeps: {
       include: ['better-auth/client/plugins', 'better-auth/vue', 'zod'],
