@@ -128,13 +128,12 @@ describe('sendMessage', () => {
     expect(emitChatMessage).toHaveBeenCalledExactlyOnceWith(message)
   })
 
-  it('rejects a nonmember without saving their message', async () => {
+  it('appends for a user who is not a member, because callers authorize', async () => {
     const { thread } = await getOrCreateThread(input)
     await expect(sendMessage({
-      threadId: thread.id, userId: 'c', plainTextBody: 'Not a member',
-    })).rejects.toThrow()
-    expect(db.select().from(chatThreadMessages).all()).toHaveLength(1)
-    expect(emitChatMessage).not.toHaveBeenCalled()
+      threadId: thread.id, userId: 'c', plainTextBody: 'From C',
+    })).resolves.toEqual(expect.objectContaining({ threadId: thread.id, userId: 'c' }))
+    expect(db.select().from(chatThreadMessages).all()).toHaveLength(2)
   })
 
   it('rejects a nonexistent thread without saving a message', async () => {

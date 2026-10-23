@@ -16,7 +16,6 @@ import {
   findOpenThreadWithThisSetOfMembers,
   messageBelongsToThread,
   threadExists,
-  userIsMemberOfThread,
 } from './queries'
 
 export const chatPageDirectionSchema = z.enum(['latest', 'oldest'])
@@ -74,7 +73,9 @@ export const getOrCreateThread = async (data: CreateThreadInput): Promise<Create
 }
 
 export const sendMessage = async (data: insertChatThreadMessagesSchema) => {
-  if (!userIsMemberOfThread(data.userId, data.threadId)) {
+  // Existence only: callers own authorization (project access + membership),
+  // which keeps the service reusable for the widget's token-auth path.
+  if (!threadExists(data.threadId)) {
     throw new Error("Thread does not exist")
   }
 
@@ -147,6 +148,47 @@ export const paginateThreadMessages = async (data: PaginateThreadMessagesInput):
   return {
     messages: readingForward ? page : [...page].reverse(), metadata: {
      hasMore
+    }
+  }
+}
+
+type ListThreadsInput = {
+  userId: string
+  afterThreadId?: selectChatThreadsSchema["id"]
+  pageSize?: number
+}
+
+type ListThreadsOutput = {
+  threads: selectChatThreadsSchema[],
+  metadata: {
+    hasMore: boolean
+  }
+}
+
+export const listThreadsForUser = async (data: ListThreadsInput): Promise<ListThreadsOutput> => {
+  if (data.pageSize !== undefined) {
+    if (data.pageSize <= 0) throw new Error("page size must be at least 1")
+    if (data.pageSize > THREAD_PAGE_MAX) throw new Error(`page size must be less than ${THREAD_PAGE_MAX}`)
+  }
+
+  const resolvedPageSize = data.pageSize ?? THREAD_PAGE_MAX
+
+  const rows = await db.query.chatThreadMembers.findMany({
+    where: (member, builder) => builder.and(
+      builder.eq(member.userId, data.userId),
+      data.afterThreadId === undefined ? undefined : builder.gt(member.threadId, data.afterThreadId),
+    ),
+    with: { thread: true },
+    orderBy: chatThreadMembers.threadId,
+    limit: resolvedPageSize + 1,
+  })
+
+  const hasMore = rows.length > resolvedPageSize
+  const page = hasMore ? rows.slice(0, resolvedPageSize) : rows
+
+  return {
+    threads: page.map(row => row.thread), metadata: {
+      hasMore
     }
   }
 }
