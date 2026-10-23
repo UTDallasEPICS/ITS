@@ -11,6 +11,7 @@ import {
   type selectChatThreadsSchema,
 } from '../../db/schema'
 import { db } from '../db'
+import { emitChatMessage, emitChatThreadCreated } from './events'
 import {
   findOpenThreadWithThisSetOfMembers,
   messageBelongsToThread,
@@ -37,7 +38,7 @@ type CreateThreadOutput = {
 export const getOrCreateThread = async (data: CreateThreadInput): Promise<CreateThreadOutput> => {
   const allMembers = [...new Set([...data.otherMembers, data.initialMessage.userId])]
 
-  return db.transaction((trx): CreateThreadOutput => {
+  const result = db.transaction((trx): CreateThreadOutput => {
     const existingThread = findOpenThreadWithThisSetOfMembers(trx, data.projectId, allMembers)
     if (existingThread) {
       return { created: false, thread: existingThread }
@@ -60,15 +61,33 @@ export const getOrCreateThread = async (data: CreateThreadInput): Promise<Create
 
     return { created: true, thread }
   }, { behavior: 'immediate' })
+
+  if (result.created) {
+    try {
+      await emitChatThreadCreated(result.thread, allMembers)
+    } catch (error) {
+      console.error('[chat] failed to emit chat:thread-created', error)
+    }
+  }
+
+  return result
 }
 
 export const sendMessage = async (data: insertChatThreadMessagesSchema) => {
   if (!userIsMemberOfThread(data.userId, data.threadId)) {
     throw new Error("Thread does not exist")
   }
-  const message = db.insert(chatThreadMessages).values(data).returning()
 
-  // TODO: event emitter for websocket
+  const message = await db.insert(chatThreadMessages).values(data).returning().get()
+  if (!message) {
+    throw new Error("Failed to insert chat message.")
+  }
+
+  try {
+    await emitChatMessage(message)
+  } catch (error) {
+    console.error('[chat] failed to emit chat:message', error)
+  }
 
   return message
 }

@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm'
 import { chatThreadMembers, chatThreadMessages, chatThreads, organization, project, user } from '../../server/db/schema'
 import { db } from '../../server/utils/db'
 import { getOrCreateThread, paginateThreadMessages, sendMessage } from '../../server/utils/chat/service'
+import { emitChatMessage, emitChatThreadCreated } from '../../server/utils/chat/events'
 
 vi.mock('../../server/utils/db', async () => {
   const { default: Database } = await import('better-sqlite3')
@@ -12,6 +13,11 @@ vi.mock('../../server/utils/db', async () => {
   const schema = await import('../../server/db/schema')
   return { db: drizzle(new Database(':memory:'), { schema }) }
 })
+
+vi.mock('../../server/utils/chat/events', () => ({
+  emitChatMessage: vi.fn(),
+  emitChatThreadCreated: vi.fn(),
+}))
 
 migrate(db, { migrationsFolder: './drizzle' })
 db.$client.pragma('foreign_keys = ON')
@@ -23,6 +29,8 @@ const input = {
 }
 
 beforeEach(() => {
+  vi.mocked(emitChatMessage).mockClear()
+  vi.mocked(emitChatThreadCreated).mockClear()
   db.delete(chatThreadMessages).run()
   db.delete(chatThreadMembers).run()
   db.delete(chatThreads).run()
@@ -48,6 +56,8 @@ describe('getOrCreateThread', () => {
     expect(db.select().from(chatThreadMessages).all()).toEqual([
       expect.objectContaining({ threadId: result.thread.id, userId: 'a', plainTextBody: 'Hello' }),
     ])
+    expect(emitChatMessage).not.toHaveBeenCalled()
+    expect(emitChatThreadCreated).toHaveBeenCalledExactlyOnceWith(result.thread, ['b', 'a'])
   })
 
   it('reuses the exact member set regardless of order without inserting another message', async () => {
@@ -58,6 +68,7 @@ describe('getOrCreateThread', () => {
       otherMembers: ['a'],
     })
     expect(second).toEqual({ created: false, thread: first.thread })
+    expect(emitChatThreadCreated).toHaveBeenCalledOnce()
     expect(db.select().from(chatThreads).all()).toHaveLength(1)
     expect(db.select().from(chatThreadMessages).all()).toHaveLength(1)
   })
@@ -92,16 +103,29 @@ describe('getOrCreateThread', () => {
       db.$client.exec('DROP TRIGGER reject_message')
     }
   })
+
+  it('does not fail thread creation when a listener throws', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(emitChatThreadCreated).mockRejectedValueOnce(new Error('fan-out down'))
+    try {
+      const result = await getOrCreateThread(input)
+      expect(result.created).toBe(true)
+      expect(consoleError).toHaveBeenCalledOnce()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
 })
 
 describe('sendMessage', () => {
   it('saves a member’s message with its sender and thread', async () => {
     const { thread } = await getOrCreateThread(input)
-    await sendMessage({ threadId: thread.id, userId: 'b', plainTextBody: 'Reply from B' })
+    const message = await sendMessage({ threadId: thread.id, userId: 'b', plainTextBody: 'Reply from B' })
     expect(db.select().from(chatThreadMessages).all()).toEqual([
       expect.objectContaining({ threadId: thread.id, userId: 'a', plainTextBody: 'Hello' }),
       expect.objectContaining({ threadId: thread.id, userId: 'b', plainTextBody: 'Reply from B' }),
     ])
+    expect(emitChatMessage).toHaveBeenCalledExactlyOnceWith(message)
   })
 
   it('rejects a nonmember without saving their message', async () => {
@@ -110,6 +134,7 @@ describe('sendMessage', () => {
       threadId: thread.id, userId: 'c', plainTextBody: 'Not a member',
     })).rejects.toThrow()
     expect(db.select().from(chatThreadMessages).all()).toHaveLength(1)
+    expect(emitChatMessage).not.toHaveBeenCalled()
   })
 
   it('rejects a nonexistent thread without saving a message', async () => {
@@ -117,6 +142,22 @@ describe('sendMessage', () => {
       threadId: 999, userId: 'a', plainTextBody: 'Missing thread',
     })).rejects.toThrow()
     expect(db.select().from(chatThreadMessages).all()).toHaveLength(0)
+    expect(emitChatMessage).not.toHaveBeenCalled()
+  })
+
+  it('keeps the message when a listener fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(emitChatMessage).mockRejectedValueOnce(new Error('fan-out down'))
+    try {
+      const { thread } = await getOrCreateThread(input)
+      await expect(sendMessage({
+        threadId: thread.id, userId: 'b', plainTextBody: 'Still saved',
+      })).resolves.toEqual(expect.objectContaining({ plainTextBody: 'Still saved' }))
+      expect(db.select().from(chatThreadMessages).all()).toHaveLength(2)
+      expect(consoleError).toHaveBeenCalledOnce()
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 })
 
