@@ -12,7 +12,7 @@ vi.mock('../../server/utils/db', async () => {
   const { default: Database } = await import('better-sqlite3')
   const { drizzle } = await import('drizzle-orm/better-sqlite3')
   const schema = await import('../../server/db/schema')
-  const client = new Database(':memory:', { verbose: sql => statements.push(sql) })
+  const client = new Database(':memory:', { verbose: sql => statements.push(sql as string) })
   return { db: drizzle(client, { schema }) }
 })
 
