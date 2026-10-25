@@ -10,4 +10,15 @@ export default withNuxt({
     'vue/attributes-order': 'off',
     'vue/html-self-closing': 'off',
   },
+}, {
+  files: ['**/*.{ts,vue}'],
+  ignores: ['server/utils/chat/**', 'tests/**'],
+  rules: {
+    'no-restricted-imports': ['error', {
+      patterns: [{
+        group: ['**/chat/internal', '**/chat/internal/**'],
+        message: 'Chat internals are private. Import a public chat entry point instead.',
+      }],
+    }],
+  },
 })
