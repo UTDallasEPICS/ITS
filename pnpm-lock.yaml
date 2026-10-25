@@ -24,12 +24,18 @@ importers:
       better-auth:
         specifier: 1.6.23
         version: 1.6.23(better-sqlite3@12.11.1)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@types/better-sqlite3@9.6.0)(better-sqlite3@12.11.1)(kysely@0.29.3))(vitest@4.1.11(@types/node@26.1.1)(happy-dom@20.11.6)(vite@8.2.2(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.12)(yaml@2.9.0)))(vue@3.5.41(typescript@6.0.3))
+      crossws:
+        specifier: 0.3.5
+        version: 0.3.5
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
       file-type:
         specifier: ^22.0.2
         version: 22.0.2(supports-color@10.2.2)
+      h3:
+        specifier: 1.15.11
+        version: 1.15.11
       nodemailer:
         specifier: ^9.0.5
         version: 9.0.5
