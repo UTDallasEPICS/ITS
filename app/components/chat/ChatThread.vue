@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, ref, watch } from 'vue'
+  import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
   import { useChatThread } from '../../composables/useChatThread'
+  import { useChatDraft } from '../../composables/useChatDraft'
   import type { ChatAdapter } from '../../types/chat'
 
   /**
@@ -16,6 +17,7 @@
     adapter: ChatAdapter
     /** Highlights the signed-in user's own messages. */
     currentUserId?: string
+    threadId?: number
     /** Optional userId -> display name map; ids are shown when a name is missing. */
     authorNames?: Record<string, string>
     title?: string
@@ -33,8 +35,25 @@
     sendMessage,
   } = useChatThread(props.adapter)
 
-  const draft = ref('')
+  const draft = useChatDraft(() => props.currentUserId, () => props.threadId)
   const list = ref<HTMLElement | null>(null)
+  const composerId = useId()
+  const following = ref(true)
+  const unseenMessages = ref(false)
+
+  function trackScroll() {
+    const element = list.value
+    if (!element) return
+    following.value = element.scrollHeight - element.clientHeight - element.scrollTop <= 48
+    if (following.value) unseenMessages.value = false
+  }
+
+  async function scrollToLatest() {
+    following.value = true
+    unseenMessages.value = false
+    await nextTick()
+    if (list.value) list.value.scrollTop = list.value.scrollHeight
+  }
 
   const canSend = computed(
     () => draft.value.trim().length > 0 && !sending.value && loadState.value === 'ready'
@@ -57,12 +76,15 @@
     void start()
   })
 
-  // Keep the newest message in view as history loads and as messages arrive.
+  watch(loadState, (state) => {
+    if (state === 'ready') void scrollToLatest()
+  })
+
   watch(
     () => messages.value.length,
     async () => {
-      await nextTick()
-      if (list.value) list.value.scrollTop = list.value.scrollHeight
+      if (following.value) await scrollToLatest()
+      else unseenMessages.value = true
     }
   )
 
@@ -78,13 +100,17 @@
 
   async function submit() {
     if (!canSend.value) return
-    if (await sendMessage(draft.value)) draft.value = ''
+    const submitted = draft.value
+    if (await sendMessage(submitted)) {
+      if (draft.value === submitted) draft.value = ''
+      await scrollToLatest()
+    }
   }
 </script>
 
 <template>
   <section
-    class="flex h-full flex-col rounded-lg border border-gray-200 dark:border-gray-800"
+    class="flex h-full min-h-0 flex-col rounded-lg border border-gray-200 dark:border-gray-800"
     aria-label="Conversation"
   >
     <header
@@ -98,9 +124,10 @@
 
     <div
       ref="list"
-      class="flex-1 space-y-3 overflow-y-auto px-4 py-4"
+      class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
       role="log"
       aria-label="Messages"
+      @scroll="trackScroll"
     >
       <p
         v-if="loadState === 'loading' || loadState === 'idle'"
@@ -144,6 +171,10 @@
       </ul>
     </div>
 
+    <div v-if="unseenMessages" class="flex justify-center border-t border-gray-200 py-2 dark:border-gray-800">
+      <UButton variant="soft" size="sm" @click="scrollToLatest">New messages ↓</UButton>
+    </div>
+
     <form
       class="space-y-2 border-t border-gray-200 px-4 py-3 dark:border-gray-800"
       @submit.prevent="submit"
@@ -155,9 +186,9 @@
         title="Unable to send message"
         :description="sendError"
       />
-      <label for="chat-thread-message" class="sr-only">Message</label>
+      <label :for="composerId" class="sr-only">Message</label>
       <UTextarea
-        id="chat-thread-message"
+        :id="composerId"
         v-model="draft"
         :rows="3"
         :disabled="loadState !== 'ready'"

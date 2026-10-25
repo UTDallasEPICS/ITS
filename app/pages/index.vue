@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { authClient } from '../utils/auth-client'
+  import { clearChatDrafts } from '../utils/chat-drafts'
 
   const { data: users, pending, error } = await useFetch('/api/users')
 
@@ -9,7 +10,9 @@
   const isModalOpen = ref(false)
 
   async function logout() {
-    await authClient.signOut()
+    const result = await authClient.signOut()
+    if (result.error) return
+    clearChatDrafts()
     await navigateTo('/auth', { external: true })
   }
 

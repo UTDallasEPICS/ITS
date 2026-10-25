@@ -2,15 +2,6 @@ import type { ChatWireMessage } from '#shared/types/chat'
 
 export type { ChatWireMessage }
 
-/**
- * Everything a chat thread needs from its data source.
- *
- * The interface is deliberately auth-agnostic: the ITS session adapter is only
- * the first implementation, and the widget (#7) will plug in a token-authenticated
- * one without the component knowing the difference. That is why `subscribe` is
- * optional — a read-only or snapshot adapter can leave it out and the UI simply
- * reports that live updates are unavailable.
- */
 export interface ChatAdapter {
   /**
    * Loads a page of messages ordered oldest first. `after` is an exclusive id
