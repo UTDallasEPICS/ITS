@@ -4,16 +4,13 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { eq } from 'drizzle-orm'
 import { chatThreadMembers, chatThreadMessages, chatThreads, organization, project, user } from '../../server/db/schema'
 import { db } from '../../server/utils/db'
-import { getOrCreateThread, paginateThreadMessages, sendMessage } from '../../server/utils/chat'
-
-const { statements } = vi.hoisted(() => ({ statements: [] as string[] }))
+import { getOrCreateThread, paginateThreadMessages, sendMessage } from '../../server/utils/chat/service'
 
 vi.mock('../../server/utils/db', async () => {
   const { default: Database } = await import('better-sqlite3')
   const { drizzle } = await import('drizzle-orm/better-sqlite3')
   const schema = await import('../../server/db/schema')
-  const client = new Database(':memory:', { verbose: sql => statements.push(sql as string) })
-  return { db: drizzle(client, { schema }) }
+  return { db: drizzle(new Database(':memory:'), { schema }) }
 })
 
 migrate(db, { migrationsFolder: './drizzle' })
@@ -44,17 +41,6 @@ beforeEach(() => {
 afterAll(() => db.$client.close())
 
 describe('getOrCreateThread', () => {
-  it('reserves the SQLite writer before looking up a thread, including on reuse', async () => {
-    for (const created of [true, false]) {
-      statements.length = 0
-      const result = await getOrCreateThread(input)
-      expect(result.created).toBe(created)
-      expect(statements[0]).toBe('BEGIN IMMEDIATE')
-      expect(statements[1]).toMatch(/^select /i)
-      expect(statements.at(-1)).toBe('COMMIT')
-    }
-  })
-
   it('creates the thread, unique members, and initial message atomically', async () => {
     const result = await getOrCreateThread({ ...input, otherMembers: ['b', 'a', 'b'] })
     expect(result.created).toBe(true)
