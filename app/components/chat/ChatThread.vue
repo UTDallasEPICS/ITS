@@ -106,6 +106,12 @@
       await scrollToLatest()
     }
   }
+
+  function onComposerKeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return
+    event.preventDefault()
+    void submit()
+  }
 </script>
 
 <template>
@@ -141,6 +147,8 @@
         <UAlert
           role="alert"
           color="error"
+          variant="soft"
+          class="text-red-800 dark:text-red-200"
           title="Unable to load messages"
           :description="loadError"
         />
@@ -183,6 +191,8 @@
         v-if="sendError"
         role="alert"
         color="error"
+        variant="soft"
+        class="text-red-800 dark:text-red-200"
         title="Unable to send message"
         :description="sendError"
       />
@@ -193,9 +203,12 @@
         :rows="3"
         :disabled="loadState !== 'ready'"
         placeholder="Write a message…"
+        :aria-describedby="`${composerId}-hint`"
         class="w-full"
+        @keydown="onComposerKeydown"
       />
-      <div class="flex justify-end">
+      <div class="flex items-center justify-between gap-3">
+        <p :id="`${composerId}-hint`" class="text-muted text-xs">Enter to send · Shift+Enter for a new line</p>
         <UButton type="submit" :disabled="!canSend">
           {{ sending ? 'Sending…' : 'Send' }}
         </UButton>
