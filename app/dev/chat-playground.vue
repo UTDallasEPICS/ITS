@@ -4,7 +4,7 @@
   import type { ChatAdapter, ChatConnectionStatus, ChatSubscriptionHandlers, ChatWireMessage } from '../types/chat'
 
   const currentUserId = 'chat-playground-user'
-  const authorNames = { [currentUserId]: 'You · NPTS', partner: 'Ada · Project partner' }
+  const authorNames = { [currentUserId]: 'You · NPTS', partner: 'Ada · North Texas Community Center' }
   const sample = [
     'Hi! We are preparing the community website for launch next week.',
     'Great. Which part would you like us to take a look at first?',

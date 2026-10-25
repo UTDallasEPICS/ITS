@@ -141,6 +141,43 @@ describe('ChatThread', () => {
     expect(mounted.get<HTMLTextAreaElement>('textarea').element.value).toBe('')
   })
 
+  it('sends on Enter without inserting a newline', async () => {
+    const { adapter } = createAdapter()
+    const mounted = await mountThread(adapter)
+    await mounted.get('textarea').setValue('Keyboard reply')
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    mounted.get('textarea').element.dispatchEvent(enter)
+    await flushPromises()
+
+    expect(enter.defaultPrevented).toBe(true)
+    expect(adapter.sendMessage).toHaveBeenCalledExactlyOnceWith('Keyboard reply')
+    expect(mounted.get<HTMLTextAreaElement>('textarea').element.value).toBe('')
+  })
+
+  it('leaves Shift+Enter to the textarea for a newline', async () => {
+    const { adapter } = createAdapter()
+    const mounted = await mountThread(adapter)
+    await mounted.get('textarea').setValue('First line')
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true })
+    mounted.get('textarea').element.dispatchEvent(enter)
+    await flushPromises()
+
+    expect(enter.defaultPrevented).toBe(false)
+    expect(adapter.sendMessage).not.toHaveBeenCalled()
+  })
+
+  it.each([{ isComposing: true }, { keyCode: 229 }])('does not send while confirming IME input (%j)', async (input) => {
+    const { adapter } = createAdapter()
+    const mounted = await mountThread(adapter)
+    await mounted.get('textarea').setValue('Composing')
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...input })
+    mounted.get('textarea').element.dispatchEvent(enter)
+    await flushPromises()
+
+    expect(enter.defaultPrevented).toBe(false)
+    expect(adapter.sendMessage).not.toHaveBeenCalled()
+  })
+
   it('keeps the draft when sending fails', async () => {
     const sendMessage = vi.fn(async (): Promise<ChatWireMessage> => {
       throw new Error('network down')
