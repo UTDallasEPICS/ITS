@@ -107,6 +107,14 @@ beforeEach(() => {
 afterAll(() => db.$client.close())
 
 describe('GET /api/chat/threads', () => {
+  it('returns 500 rather than a validation failure when the database fails', async () => {
+    db.$client.exec('ALTER TABLE chat_thread_members RENAME TO unavailable_members')
+    try {
+      expect((await request()).status).toBe(500)
+    } finally {
+      db.$client.exec('ALTER TABLE unavailable_members RENAME TO chat_thread_members')
+    }
+  })
   it('returns the threads the caller was added to, ascending by id', async () => {
     const response = await request()
 
