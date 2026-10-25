@@ -1,4 +1,5 @@
-import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { desc } from 'drizzle-orm'
+import { z } from 'zod'
 import {
   chatThreadMembers,
   chatThreadMessages,
@@ -8,49 +9,18 @@ import {
   type insertChatThreadsSchema,
   type selectChatThreadMessagesSchema,
   type selectChatThreadsSchema,
-} from '../db/schema'
-import { db } from './db'
+} from '../../db/schema'
+import { db } from '../db'
+import {
+  findOpenThreadWithThisSetOfMembers,
+  messageBelongsToThread,
+  threadExists,
+  userIsMemberOfThread,
+} from './queries'
 
-type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
+export const chatPageDirectionSchema = z.enum(['latest', 'oldest'])
 
-const findOpenThreadWithThisSetOfMembers = (
-  trx: ChatTransaction,
-  projectId: CreateThreadInput['projectId'],
-  members: CreateThreadInput['otherMembers'],
-): selectChatThreadsSchema | null => {
-  const memberIds = [...new Set(members)]
-  if (memberIds.length === 0) return null
-
-  const matchingThreadIdSubquery = trx
-    .select({ threadId: chatThreadMembers.threadId })
-    .from(chatThreadMembers)
-    .groupBy(chatThreadMembers.threadId)
-    .having(
-      and(
-        eq(count(), memberIds.length),
-        eq(
-          sql<number>`sum(case when ${inArray(chatThreadMembers.userId, memberIds)} then 1 else 0 end)`,
-          memberIds.length,
-        ),
-      ),
-    )
-
-  return (
-    trx
-      .select()
-      .from(chatThreads)
-      .where(
-        and(
-          eq(chatThreads.projectId, projectId),
-          isNull(chatThreads.closedAt),
-          inArray(chatThreads.id, matchingThreadIdSubquery),
-        ),
-      )
-      .orderBy(chatThreads.id)
-      .limit(1)
-      .get() ?? null
-  )
-}
+export type ChatPageDirection = z.infer<typeof chatPageDirectionSchema>
 
 type CreateThreadInput = {
   projectId: insertChatThreadsSchema["projectId"],
@@ -92,17 +62,6 @@ export const getOrCreateThread = async (data: CreateThreadInput): Promise<Create
   }, { behavior: 'immediate' })
 }
 
-const userIsMemberOfThread = (userId: string, threadId: number): boolean => {
-  const membershipRecord = db
-    .select({ userId: chatThreadMembers.userId })
-    .from(chatThreadMembers)
-    .where(and(eq(chatThreadMembers.userId, userId), eq(chatThreadMembers.threadId, threadId)))
-    .limit(1)
-    .get()
-  
-  return !!membershipRecord
-}
-
 export const sendMessage = async (data: insertChatThreadMessagesSchema) => {
   if (!userIsMemberOfThread(data.userId, data.threadId)) {
     throw new Error("Thread does not exist")
@@ -113,21 +72,6 @@ export const sendMessage = async (data: insertChatThreadMessagesSchema) => {
 
   return message
 }
-
-
-/**
- * Which end of a thread a page is read from.
- *
- * `latest` reads backwards from the newest message: it is what a reader sees
- * when opening a thread. `oldest` reads forwards from the start of the thread,
- * which is what catch-up and transcript export need.
- *
- * Pages are always returned in ascending id order, and `hasMore` refers to the
- * next page in the direction that was read.
- */
-export const CHAT_PAGE_DIRECTIONS = ['latest', 'oldest'] as const
-
-export type ChatPageDirection = (typeof CHAT_PAGE_DIRECTIONS)[number]
 
 type PaginateThreadMessagesInput = {
   threadId: selectChatThreadMessagesSchema["threadId"]
@@ -145,34 +89,12 @@ type PaginateThreadMessagesOutput = {
 
 const THREAD_PAGE_MAX = 25
 
-const threadExists = (threadId: number): boolean => {
-  const threadRecord = db
-    .select({ id: chatThreads.id })
-    .from(chatThreads)
-    .where(eq(chatThreads.id, threadId))
-    .limit(1)
-    .get()
-
-  return !!threadRecord
-}
-
-const messageBelongsToThread = (messageId: number, threadId: number): boolean => {
-  const messageRecord = db
-    .select({ id: chatThreadMessages.id })
-    .from(chatThreadMessages)
-    .where(and(eq(chatThreadMessages.id, messageId), eq(chatThreadMessages.threadId, threadId)))
-    .limit(1)
-    .get()
-
-  return !!messageRecord
-} 
-
 export const paginateThreadMessages = async (data: PaginateThreadMessagesInput): Promise<PaginateThreadMessagesOutput> => {
   if (data.pageSize !== undefined) {
     if (data.pageSize <= 0) throw new Error("page size must be at least 1")
     if (data.pageSize > THREAD_PAGE_MAX) throw new Error(`page size must be less than ${THREAD_PAGE_MAX}`)
   }
-  
+
   const resolvedPageSize = data.pageSize ?? THREAD_PAGE_MAX
 
   if (!threadExists(data.threadId)) {
