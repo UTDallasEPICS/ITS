@@ -4,7 +4,6 @@ import { requireThreadAccess } from '~~/server/utils/chat/access'
 import { sendMessage } from '~~/server/utils/chat/service'
 import { requireUser } from '~~/server/utils/session'
 
-// Identity comes from the session, never the body.
 const bodySchema = z.strictObject({
   plainTextBody: z.string().trim().min(1, 'Enter a message.'),
 })
