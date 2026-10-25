@@ -11,19 +11,6 @@ import {
   unsubscribePeer,
 } from './ws'
 
-/**
- * One socket per signed-in user, carrying everything chat-related they can see.
- *
- * The session, not the URL, decides what arrives: the peer is indexed into the
- * threads it is already a member of at connect, and threads created later are
- * added by the `chat:thread-created` listener. Sends still go through
- * POST /messages; this socket is server -> client only.
- *
- * Reconnect contract: open the socket, then fetch what was missed over HTTP
- * (`after=<last id>` for a thread, `after=<last thread id>` for the list). The
- * server does not replay history, so an interrupted connection is recoverable
- * without socket state.
- */
 export const chatSocketHooks: Partial<Hooks> = {
   async upgrade(request) {
     const session = await auth.api.getSession({ headers: request.headers })
