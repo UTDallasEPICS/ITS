@@ -1,16 +1,18 @@
 import { requireUser } from '../../utils/session'
 import { requireAdmin } from '../../utils/authorization'
 import { db } from '../../utils/db'
-import { organization, user } from '../../db/schema'
+import { user } from '../../db/schema'
 import { eq } from 'drizzle-orm'
+import { validateOrganization } from '../../utils/user-validation'
 
 export default defineEventHandler(async (event) => {
+  // guard
   const currentUser = requireUser(event)
   await requireAdmin(currentUser.id)
 
   const body = await readBody(event)
   const { name, email, orgId } = body
-
+  // Validate the name and email
   if (
     typeof name !== 'string' ||
     name.trim() === '' ||
@@ -22,27 +24,11 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Invalid name or email',
     })
   }
-
-  if (orgId !== null && (typeof orgId !== 'string' || orgId.trim() === '')) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid organization ID',
-    })
-  }
-
-  if (orgId !== null) {
-    const [foundOrg] = await db.select().from(organization).where(eq(organization.id, orgId))
-
-    if (!foundOrg) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Organization not found',
-      })
-    }
-  }
+  //  Validate the organization ID
+  const validatedOrgId = await validateOrganization(orgId)
 
   const normalizedEmail = email.trim().toLowerCase()
-
+  // Check if the email already exists
   const [existingUser] = await db
     .select({ id: user.id })
     .from(user)
@@ -54,13 +40,13 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Email already exists',
     })
   }
-
+  // Create the new user
   const [newUser] = await db
     .insert(user)
     .values({
       name: name.trim(),
       email: normalizedEmail,
-      orgId: orgId,
+      orgId: validatedOrgId,
     })
     .returning({
       id: user.id,
@@ -68,7 +54,7 @@ export default defineEventHandler(async (event) => {
       email: user.email,
       orgId: user.orgId,
     })
-
+  // Set the response status to 201 (Created)
   setResponseStatus(event, 201)
   return {
     message: 'User created successfully',

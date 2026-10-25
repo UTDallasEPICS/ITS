@@ -6,6 +6,7 @@ import { user } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
+  // guard
   const currentUser = requireUser(event)
   await requireAdmin(currentUser.id)
 
@@ -20,9 +21,9 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
   const { orgId } = body
-
+  // Validate the organization ID
   const validatedOrgId = await validateOrganization(orgId)
-
+  // Update the user's organization ID
   const [updatedUser] = await db
     .update(user)
     .set({

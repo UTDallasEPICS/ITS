@@ -3,6 +3,7 @@ import { db } from './db'
 import { organization } from '../db/schema'
 
 export async function validateOrganization(orgId: unknown) {
+  // Check if orgId is null or a non-empty string
   if (orgId !== null && (typeof orgId !== 'string' || orgId.trim() === '')) {
     throw createError({
       statusCode: 400,
@@ -13,7 +14,7 @@ export async function validateOrganization(orgId: unknown) {
   if (orgId === null) {
     return null
   }
-
+  // Check if the organization exists in the database
   const [foundOrg] = await db
     .select({ id: organization.id })
     .from(organization)

@@ -14,6 +14,8 @@ export default defineEventHandler(async (event) => {
       id: user.id,
       email: user.email,
       name: user.name,
+      isArchived: user.isArchived,
+      orgId: user.orgId,
       emailVerified: user.emailVerified,
       image: user.image,
     })

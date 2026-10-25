@@ -1,4 +1,7 @@
 import { auth } from '~~/server/utils/auth'
+import { db } from '~~/server/utils/db'
+import { user } from '~~/server/db/schema'
+import { eq } from 'drizzle-orm'
 
 // API paths that must stay reachable without a session. Better Auth's own
 // endpoints (sign-in, email OTP, get-session, etc.) live under /api/auth.
@@ -33,6 +36,18 @@ export default defineEventHandler(async (event) => {
 
   if (!session) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+  // Check if the user is archived
+  const [currentUser] = await db
+    .select({ isArchived: user.isArchived })
+    .from(user)
+    .where(eq(user.id, session.user.id))
+
+  if (!currentUser || currentUser.isArchived) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Account is inactive',
+    })
   }
 
   event.context.user = session.user
