@@ -8,6 +8,7 @@ import {
   type selectChatThreadsSchema,
 } from '../../../db/schema'
 import { db } from '../../db'
+import { lazyQuery } from '../../lazy-query'
 
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
@@ -48,11 +49,6 @@ export const findOpenThreadWithThisSetOfMembers = (
       .limit(1)
       .get() ?? null
   )
-}
-
-function lazyQuery<T>(prepare: () => T) {
-  let query: T | undefined
-  return () => query ??= prepare()
 }
 
 const threadLookup = lazyQuery(() => db.select({ id: chatThreads.id }).from(chatThreads)

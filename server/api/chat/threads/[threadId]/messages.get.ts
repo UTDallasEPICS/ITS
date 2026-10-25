@@ -18,10 +18,10 @@ const pageSchema = z.object({
   pageSize: z.coerce.number().int().positive().optional(),
 })
 const querySchema = z.union([
-  pageSchema.extend({ after: cursorSchema, before: z.never().optional() }),
-  pageSchema.extend({ before: cursorSchema, after: z.never().optional() }),
-  pageSchema.extend({ after: z.never().optional(), before: z.never().optional() }),
-])
+  z.object({ after: cursorSchema, before: z.never().optional() }),
+  z.object({ before: cursorSchema, after: z.never().optional() }),
+  z.object({ after: z.never().optional(), before: z.never().optional() }),
+]).and(pageSchema)
 
 export default defineEventHandler(async (event) => {
   const threadId = Number(getRouterParam(event, 'threadId'))
