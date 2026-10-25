@@ -25,7 +25,7 @@ export const chatSocketHooks: Partial<Hooks> = {
       .all()
       .map(row => row.threadId)
 
-    return { context: { userId: session.user.id, threadIds } }
+    Object.assign(request.context, { userId: session.user.id, threadIds })
   },
 
   open(peer) {
