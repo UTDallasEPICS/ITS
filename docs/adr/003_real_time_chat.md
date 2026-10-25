@@ -111,6 +111,8 @@ Given the additional requirement to have other side effects execute when chat me
 
 [Service sent events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) was also considered as an alternative to WebSockets but eventually decided against. SSE is basically the same as WebSockets, but only works in one direction, sending updates from the server to the client. Chat is inherently bidirectional (client also needs to send messages to the server), so it was decided that it doesn't make sense to only use SSE for receiving messages and then have to implement a separate API endpoint for sending them.
 
+One further decision fell out of this: the WebSocket is scoped to the signed-in user (`/api/chat/ws`), not to an individual thread. The server decides which messages and new-thread events a connection receives based on the user's thread membership, so the client holds one connection open while navigating between conversations instead of reconnecting per thread.
+
 ---
 
 ## 5. Consequences & Next Steps
