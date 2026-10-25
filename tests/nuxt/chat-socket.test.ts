@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import { createServer } from 'node:http'
+import { once } from 'node:events'
+import nodeAdapter from 'crossws/adapters/node'
 import type { Peer } from 'crossws'
 import { chatThreadMembers, chatThreads, organization, project, user } from '../../server/db/schema'
 import { db } from '../../server/utils/db'
@@ -29,10 +32,7 @@ migrate(db, { migrationsFolder: './drizzle' })
 db.$client.pragma('foreign_keys = ON')
 
 function upgradeRequest() {
-  return {
-    url: 'http://localhost/api/chat/ws',
-    headers: new Headers(),
-  } as Request & { readonly context?: Record<string, unknown> }
+  return Object.assign(new Request('http://localhost/api/chat/ws'), { context: {} })
 }
 
 function fakePeer(context: Record<string, unknown> = {}) {
@@ -90,12 +90,63 @@ describe('chat socket upgrade', () => {
     expect((response as Response).status).toBe(401)
   })
 
-  it('seeds the connection with the threads the session is a member of', async () => {
+  it('seeds the adapter-provided context with only the session user’s threads', async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({ user: { id: 'member' } } as never)
 
-    const response = await chatSocketHooks.upgrade!(upgradeRequest())
+    const request = upgradeRequest()
+    const response = await chatSocketHooks.upgrade!(request)
 
-    expect(response).toEqual({ context: { userId: 'member', threadIds: [1] } })
+    expect(response).toBeUndefined()
+    expect(request.context).toEqual({ userId: 'member', threadIds: [1] })
+  })
+
+  it('preserves authentication context through a real Node adapter handshake', async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({ user: { id: 'member' } } as never)
+    let connectedPeer: Peer | undefined
+    let resolvePeerClosed!: () => void
+    const peerClosed = new Promise<void>(resolve => { resolvePeerClosed = resolve })
+    const adapter = nodeAdapter({ hooks: {
+      ...chatSocketHooks,
+      open(peer) {
+        connectedPeer = peer
+        return chatSocketHooks.open!(peer)
+      },
+      close(peer, details) {
+        chatSocketHooks.close!(peer, details)
+        resolvePeerClosed()
+      },
+    } })
+    const server = createServer()
+    server.on('upgrade', (request, socket, head) => { void adapter.handleUpgrade(request, socket, head) })
+    server.listen(0, '127.0.0.1')
+    await once(server, 'listening')
+    const address = server.address()
+    if (!address || typeof address === 'string') throw new Error('Missing test server port')
+    const socket = new WebSocket(`ws://127.0.0.1:${address.port}/api/chat/ws`)
+
+    function nextFrame() {
+      return new Promise<unknown>((resolve, reject) => {
+        socket.addEventListener('message', event => resolve(JSON.parse(String(event.data))), { once: true })
+        socket.addEventListener('close', event => reject(new Error(`Socket closed: ${event.code}`)), { once: true })
+        socket.addEventListener('error', () => reject(new Error('Socket error')), { once: true })
+      })
+    }
+
+    try {
+      expect(await nextFrame()).toEqual({ type: 'ready' })
+      expect(threadPeerCount(1)).toBe(1)
+      expect(threadPeerCount(2)).toBe(0)
+      const message = nextFrame()
+      publishChatMessage(1, wireMessage)
+      expect(await message).toEqual({ type: 'message.created', message: wireMessage })
+    } finally {
+      const closed = socket.readyState === WebSocket.CLOSED ? Promise.resolve() : once(socket, 'close')
+      socket.close()
+      adapter.closeAll(1000)
+      await closed
+      if (connectedPeer) await peerClosed
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
+    }
   })
 })
 
