@@ -14,14 +14,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid pagination parameters' })
   }
 
-  try {
-    return await listThreadsForUser({
-      userId: requireUser(event).id,
-      afterThreadId: query.data.after,
-      pageSize: query.data.pageSize,
-    })
-  } catch (error) {
-    if (error instanceof Error && 'statusCode' in error) throw error
+  const result = await listThreadsForUser({
+    userId: requireUser(event).id,
+    afterThreadId: query.data.after,
+    pageSize: query.data.pageSize,
+  })
+  if (!result.ok) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid page size' })
   }
+  return result.value
 })

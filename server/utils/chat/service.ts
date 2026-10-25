@@ -1,4 +1,3 @@
-import { desc } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   chatThreadMembers,
@@ -15,8 +14,14 @@ import { emitChatMessage, emitChatThreadCreated } from './events'
 import {
   findOpenThreadWithThisSetOfMembers,
   messageBelongsToThread,
+  readMessagePage,
+  readThreadPage,
   threadExists,
-} from './queries'
+} from './internal/queries'
+
+export type Result<T, E> = { ok: true, value: T } | { ok: false, error: E }
+
+type PaginationError = 'invalid-page-size' | 'thread-not-found' | 'invalid-cursor'
 
 export const chatPageDirectionSchema = z.enum(['latest', 'oldest'])
 
@@ -34,7 +39,7 @@ type CreateThreadOutput = {
   thread: selectChatThreadsSchema
 }
 
-export const getOrCreateThread = async (data: CreateThreadInput): Promise<CreateThreadOutput> => {
+export const getOrCreateThread = async (data: CreateThreadInput): Promise<Result<CreateThreadOutput, never>> => {
   const allMembers = [...new Set([...data.otherMembers, data.initialMessage.userId])]
 
   const result = db.transaction((trx): CreateThreadOutput => {
@@ -69,14 +74,12 @@ export const getOrCreateThread = async (data: CreateThreadInput): Promise<Create
     }
   }
 
-  return result
+  return { ok: true, value: result }
 }
 
-export const sendMessage = async (data: insertChatThreadMessagesSchema) => {
-  // Existence only: callers own authorization (project access + membership),
-  // which keeps the service reusable for the widget's token-auth path.
+export const sendMessage = async (data: insertChatThreadMessagesSchema): Promise<Result<selectChatThreadMessagesSchema, 'thread-not-found'>> => {
   if (!threadExists(data.threadId)) {
-    throw new Error("Thread does not exist")
+    return { ok: false, error: 'thread-not-found' }
   }
 
   const message = await db.insert(chatThreadMessages).values(data).returning().get()
@@ -90,7 +93,7 @@ export const sendMessage = async (data: insertChatThreadMessagesSchema) => {
     console.error('[chat] failed to emit chat:message', error)
   }
 
-  return message
+  return { ok: true, value: message }
 }
 
 type PaginateThreadMessagesInput = {
@@ -109,36 +112,22 @@ type PaginateThreadMessagesOutput = {
 
 const THREAD_PAGE_MAX = 25
 
-export const paginateThreadMessages = async (data: PaginateThreadMessagesInput): Promise<PaginateThreadMessagesOutput> => {
-  if (data.pageSize !== undefined) {
-    if (data.pageSize <= 0) throw new Error("page size must be at least 1")
-    if (data.pageSize > THREAD_PAGE_MAX) throw new Error(`page size must be less than ${THREAD_PAGE_MAX}`)
-  }
+export const paginateThreadMessages = async (data: PaginateThreadMessagesInput): Promise<Result<PaginateThreadMessagesOutput, PaginationError>> => {
+  if (!validPageSize(data.pageSize)) return { ok: false, error: 'invalid-page-size' }
 
   const resolvedPageSize = data.pageSize ?? THREAD_PAGE_MAX
 
   if (!threadExists(data.threadId)) {
-    throw new Error("Thread does not exist")
+    return { ok: false, error: 'thread-not-found' }
   }
 
   if (data.cursorMessageId !== undefined && !messageBelongsToThread(data.cursorMessageId, data.threadId)) {
-    throw new Error("Invalid cursor")
+    return { ok: false, error: 'invalid-cursor' }
   }
 
   const readingForward = data.direction === 'oldest'
 
-  const rows = await db.query.chatThreadMessages.findMany({
-    where: (message, builder) => builder.and(
-      builder.eq(message.threadId, data.threadId),
-      data.cursorMessageId === undefined
-        ? undefined
-        : readingForward
-          ? builder.gt(message.id, data.cursorMessageId)
-          : builder.lt(message.id, data.cursorMessageId),
-    ),
-    limit: resolvedPageSize + 1,
-    orderBy: readingForward ? chatThreadMessages.id : desc(chatThreadMessages.id)
-  })
+  const rows = readMessagePage({ ...data, limit: resolvedPageSize + 1 })
 
   // The extra row only tells us whether another page exists in the direction we
   // are reading, so it never reaches the caller.
@@ -146,9 +135,8 @@ export const paginateThreadMessages = async (data: PaginateThreadMessagesInput):
   const page = hasMore ? rows.slice(0, resolvedPageSize) : rows
 
   return {
-    messages: readingForward ? page : [...page].reverse(), metadata: {
-     hasMore
-    }
+    ok: true,
+    value: { messages: readingForward ? page : [...page].reverse(), metadata: { hasMore } },
   }
 }
 
@@ -165,30 +153,19 @@ type ListThreadsOutput = {
   }
 }
 
-export const listThreadsForUser = async (data: ListThreadsInput): Promise<ListThreadsOutput> => {
-  if (data.pageSize !== undefined) {
-    if (data.pageSize <= 0) throw new Error("page size must be at least 1")
-    if (data.pageSize > THREAD_PAGE_MAX) throw new Error(`page size must be less than ${THREAD_PAGE_MAX}`)
-  }
+export const listThreadsForUser = async (data: ListThreadsInput): Promise<Result<ListThreadsOutput, 'invalid-page-size'>> => {
+  if (!validPageSize(data.pageSize)) return { ok: false, error: 'invalid-page-size' }
 
   const resolvedPageSize = data.pageSize ?? THREAD_PAGE_MAX
 
-  const rows = await db.query.chatThreadMembers.findMany({
-    where: (member, builder) => builder.and(
-      builder.eq(member.userId, data.userId),
-      data.afterThreadId === undefined ? undefined : builder.gt(member.threadId, data.afterThreadId),
-    ),
-    with: { thread: true },
-    orderBy: chatThreadMembers.threadId,
-    limit: resolvedPageSize + 1,
-  })
+  const rows = readThreadPage({ ...data, limit: resolvedPageSize + 1 })
 
   const hasMore = rows.length > resolvedPageSize
   const page = hasMore ? rows.slice(0, resolvedPageSize) : rows
 
-  return {
-    threads: page.map(row => row.thread), metadata: {
-      hasMore
-    }
-  }
+  return { ok: true, value: { threads: page, metadata: { hasMore } } }
+}
+
+function validPageSize(size: number | undefined) {
+  return size === undefined || (Number.isInteger(size) && size > 0 && size <= THREAD_PAGE_MAX)
 }

@@ -4,7 +4,13 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { eq } from 'drizzle-orm'
 import { chatThreadMembers, chatThreadMessages, chatThreads, organization, project, user } from '../../server/db/schema'
 import { db } from '../../server/utils/db'
-import { getOrCreateThread, paginateThreadMessages, sendMessage } from '../../server/utils/chat/service'
+import {
+  getOrCreateThread as createThreadResult,
+  paginateThreadMessages as messagePageResult,
+  sendMessage as sendMessageResult,
+  listThreadsForUser,
+  type Result,
+} from '../../server/utils/chat/service'
 import { emitChatMessage, emitChatThreadCreated } from '../../server/utils/chat/events'
 
 vi.mock('../../server/utils/db', async () => {
@@ -27,6 +33,16 @@ const input = {
   initialMessage: { userId: 'a', plainTextBody: 'Hello' },
   otherMembers: ['b'],
 }
+
+function value<T, E>(result: Result<T, E>): T {
+  expect(result.ok).toBe(true)
+  if (!result.ok) throw new Error(`Unexpected chat failure: ${result.error}`)
+  return result.value
+}
+
+const getOrCreateThread = async (...args: Parameters<typeof createThreadResult>) => value(await createThreadResult(...args))
+const paginateThreadMessages = async (...args: Parameters<typeof messagePageResult>) => value(await messagePageResult(...args))
+const sendMessage = async (...args: Parameters<typeof sendMessageResult>) => value(await sendMessageResult(...args))
 
 beforeEach(() => {
   vi.mocked(emitChatMessage).mockClear()
@@ -137,9 +153,9 @@ describe('sendMessage', () => {
   })
 
   it('rejects a nonexistent thread without saving a message', async () => {
-    await expect(sendMessage({
+    await expect(sendMessageResult({
       threadId: 999, userId: 'a', plainTextBody: 'Missing thread',
-    })).rejects.toThrow()
+    })).resolves.toEqual({ ok: false, error: 'thread-not-found' })
     expect(db.select().from(chatThreadMessages).all()).toHaveLength(0)
     expect(emitChatMessage).not.toHaveBeenCalled()
   })
@@ -268,22 +284,38 @@ describe('paginateThreadMessages', () => {
   it('rejects a cursor belonging to another thread', async () => {
     const { thread } = seedMessages(2)
     const other = seedMessages(1)
-    await expect(paginateThreadMessages({
+    await expect(messagePageResult({
       threadId: thread.id, direction: 'latest', cursorMessageId: other.messages[0]!.id,
-    })).rejects.toThrow()
+    })).resolves.toEqual({ ok: false, error: 'invalid-cursor' })
   })
 
   it('rejects a nonexistent cursor', async () => {
     const { thread } = seedMessages(2)
-    await expect(paginateThreadMessages({
+    await expect(messagePageResult({
       threadId: thread.id, direction: 'oldest', cursorMessageId: 999,
-    })).rejects.toThrow()
+    })).resolves.toEqual({ ok: false, error: 'invalid-cursor' })
   })
 
-  it.each([0, -1, 26])('rejects an out-of-range page size of %s', async pageSize => {
+  it.each([0, -1, 26, 1.5, NaN, Infinity])('rejects an invalid page size of %s', async pageSize => {
     const { thread } = seedMessages(1)
-    await expect(paginateThreadMessages({
+    await expect(messagePageResult({
       threadId: thread.id, direction: 'latest', pageSize,
+    })).resolves.toEqual({ ok: false, error: 'invalid-page-size' })
+    await expect(listThreadsForUser({ userId: 'a', pageSize })).resolves.toEqual({
+      ok: false, error: 'invalid-page-size',
+    })
+  })
+
+  it('returns a typed failure for a missing thread', async () => {
+    await expect(messagePageResult({ threadId: 999, direction: 'latest' })).resolves.toEqual({
+      ok: false, error: 'thread-not-found',
+    })
+  })
+
+  it('does not turn database failures into expected failures', async () => {
+    const { thread } = seedMessages(1)
+    await expect(sendMessageResult({
+      threadId: thread.id, userId: 'missing-user', plainTextBody: 'Rejected by foreign key',
     })).rejects.toThrow()
   })
 })

@@ -23,12 +23,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid message' })
   }
 
-  const message = await sendMessage({
+  const result = await sendMessage({
     threadId,
     userId: user.id,
     plainTextBody: body.data.plainTextBody,
   })
 
+  if (!result.ok) {
+    throw createError({ statusCode: 404, statusMessage: 'Thread not found' })
+  }
+
   setResponseStatus(event, 201)
-  return message
+  return result.value
 })

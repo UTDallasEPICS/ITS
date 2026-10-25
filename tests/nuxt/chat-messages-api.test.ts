@@ -12,15 +12,19 @@ import {
 } from '../../server/db/schema'
 import { db } from '../../server/utils/db'
 import messagesHandler from '../../server/api/chat/threads/[threadId]/messages.get'
+import postMessageHandler from '../../server/api/chat/threads/[threadId]/messages.post'
 
-// The route, guard, and service all run for real against a disposable memory
-// database; only the connection module and the session middleware are replaced.
 vi.mock('../../server/utils/db', async () => {
   const { default: Database } = await import('better-sqlite3')
   const { drizzle } = await import('drizzle-orm/better-sqlite3')
   const schema = await import('../../server/db/schema')
   return { db: drizzle(new Database(':memory:'), { schema }) }
 })
+
+vi.mock('../../server/utils/chat/events', () => ({
+  emitChatMessage: vi.fn(),
+  emitChatThreadCreated: vi.fn(),
+}))
 
 migrate(db, { migrationsFolder: './drizzle' })
 db.$client.pragma('foreign_keys = ON')
@@ -39,7 +43,7 @@ function sessionUser(id: string): NonNullable<H3EventContext['user']> {
   }
 }
 
-function request(query = '', userId = 'member') {
+function request(query = '', userId = 'member', init?: RequestInit) {
   const app = createApp()
   app.use(
     defineEventHandler((event) => {
@@ -51,10 +55,11 @@ function request(query = '', userId = 'member') {
   // router param the handler reads.
   const router = createRouter()
   router.get('/api/chat/threads/:threadId/messages', messagesHandler)
+  router.post('/api/chat/threads/:threadId/messages', postMessageHandler)
   app.use(router)
 
   return toWebHandler(app)(
-    new Request(`http://localhost/api/chat/threads/${threadId}/messages${query}`)
+    new Request(`http://localhost/api/chat/threads/${threadId}/messages${query}`, init)
   )
 }
 
@@ -95,6 +100,34 @@ beforeEach(() => {
     )
     .returning()
     .all()
+})
+
+describe('POST /api/chat/threads/:threadId/messages', () => {
+  function post() {
+    return request('', 'member', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ plainTextBody: 'Reply' }),
+    })
+  }
+
+  it('unwraps the successful result without changing the response contract', async () => {
+    const response = await post()
+    expect(response.status).toBe(201)
+    expect(await response.json()).toMatchObject({ threadId, userId: 'member', plainTextBody: 'Reply' })
+    expect(db.select().from(chatThreadMessages).all()).toHaveLength(6)
+  })
+
+  it('returns 500 when message insertion fails', async () => {
+    db.$client.exec(`CREATE TRIGGER reject_api_message BEFORE INSERT ON chat_thread_messages
+      BEGIN SELECT RAISE(ABORT, 'database failure'); END`)
+    try {
+      expect((await post()).status).toBe(500)
+      expect(db.select().from(chatThreadMessages).all()).toHaveLength(5)
+    } finally {
+      db.$client.exec('DROP TRIGGER reject_api_message')
+    }
+  })
 })
 
 afterAll(() => db.$client.close())
@@ -150,9 +183,24 @@ describe('GET /api/chat/threads/:threadId/messages', () => {
     expect(response.status).toBe(400)
   })
 
+  it('rejects malformed cursors even when the other cursor is absent', async () => {
+    for (const query of ['?after=abc', '?before=0', '?after=-1', '?before=1.5']) {
+      expect((await request(query)).status).toBe(400)
+    }
+  })
+
   it('hides the thread from a same-org partner who is not a member', async () => {
     const response = await request('', 'peer')
 
     expect(response.status).toBe(404)
+  })
+
+  it('returns 500 rather than 400 for a database failure', async () => {
+    db.$client.exec('ALTER TABLE chat_thread_messages RENAME TO unavailable_messages')
+    try {
+      expect((await request()).status).toBe(500)
+    } finally {
+      db.$client.exec('ALTER TABLE unavailable_messages RENAME TO chat_thread_messages')
+    }
   })
 })

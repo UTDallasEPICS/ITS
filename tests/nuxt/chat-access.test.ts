@@ -59,11 +59,35 @@ describe('requireThreadAccess', () => {
     await expect(requireThreadAccess('peer', threadId)).rejects.toMatchObject({ statusCode: 404 })
   })
 
-  it('rejects a partner from another organization', async () => {
-    await expect(requireThreadAccess('outsider', threadId)).rejects.toMatchObject({ statusCode: 403 })
+  it('hides a thread from another organization', async () => {
+    await expect(requireThreadAccess('outsider', threadId)).rejects.toMatchObject({ statusCode: 404 })
   })
 
   it('returns 404 for a thread that does not exist', async () => {
     await expect(requireThreadAccess('npts', 999)).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('hides a thread even if a different-organization partner was added as a member', async () => {
+    db.insert(chatThreadMembers).values({ threadId, userId: 'outsider' }).run()
+    await expect(requireThreadAccess('outsider', threadId)).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('does not treat a missing user as NPTS', async () => {
+    await expect(requireThreadAccess('missing', threadId)).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('executes one authorization query for every outcome', async () => {
+    for (const [userId, id] of [
+      ['npts', threadId], ['member', threadId], ['peer', threadId],
+      ['outsider', threadId], ['member', 999], ['missing', threadId],
+    ] as const) {
+      const prepare = vi.spyOn(db.$client, 'prepare')
+      try {
+        await requireThreadAccess(userId, id).catch(() => undefined)
+        expect(prepare).toHaveBeenCalledTimes(1)
+      } finally {
+        prepare.mockRestore()
+      }
+    }
   })
 })

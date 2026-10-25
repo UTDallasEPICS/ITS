@@ -13,15 +13,15 @@ import { requireUser } from '~~/server/utils/session'
  *
  * Cursors are exclusive and mutually exclusive with each other.
  */
-const querySchema = z
-  .object({
-    after: z.coerce.number().int().positive().optional(),
-    before: z.coerce.number().int().positive().optional(),
-    pageSize: z.coerce.number().int().positive().optional(),
-  })
-  .refine((query) => query.after === undefined || query.before === undefined, {
-    message: 'Use either after or before, never both.',
-  })
+const cursorSchema = z.coerce.number().int().positive()
+const pageSchema = z.object({
+  pageSize: z.coerce.number().int().positive().optional(),
+})
+const querySchema = z.union([
+  pageSchema.extend({ after: cursorSchema, before: z.never().optional() }),
+  pageSchema.extend({ before: cursorSchema, after: z.never().optional() }),
+  pageSchema.extend({ after: z.never().optional(), before: z.never().optional() }),
+])
 
 export default defineEventHandler(async (event) => {
   const threadId = Number(getRouterParam(event, 'threadId'))
@@ -36,20 +36,17 @@ export default defineEventHandler(async (event) => {
 
   await requireThreadAccess(requireUser(event).id, threadId)
 
-  try {
-    // `after` is a forward cursor, so it must read forward. `before` and a bare
-    // request read backward, from the cursor or from the newest message.
-    return await paginateThreadMessages({
-      threadId,
-      direction: query.data.after === undefined ? 'latest' : 'oldest',
-      cursorMessageId: query.data.after ?? query.data.before,
-      pageSize: query.data.pageSize,
-    })
-  } catch (error) {
-    // Anything the service rejects here is a caller-supplied cursor or page
-    // size; database failures are not realistically recoverable as 400s, but
-    // they are not expected on this path.
-    if (error instanceof Error && 'statusCode' in error) throw error
+  const result = await paginateThreadMessages({
+    threadId,
+    direction: query.data.after === undefined ? 'latest' : 'oldest',
+    cursorMessageId: query.data.after ?? query.data.before,
+    pageSize: query.data.pageSize,
+  })
+  if (!result.ok) {
+    if (result.error === 'thread-not-found') {
+      throw createError({ statusCode: 404, statusMessage: 'Thread not found' })
+    }
     throw createError({ statusCode: 400, statusMessage: 'Invalid cursor or page size' })
   }
+  return result.value
 })
