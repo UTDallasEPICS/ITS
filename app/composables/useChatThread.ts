@@ -69,9 +69,6 @@ export function useChatThread(adapter: ChatAdapter) {
     loadState.value = 'loading'
     loadError.value = ''
 
-    // Subscribe before reading history: a message sent while the page request is
-    // in flight is merged from the socket and de-duplicated by id afterwards, so
-    // nothing can slip through the gap between the read and the open socket.
     connect()
 
     try {
@@ -113,8 +110,6 @@ export function useChatThread(adapter: ChatAdapter) {
     unsubscribe = undefined
   }
 
-  // Direct composable tests have no component scope; only hook cleanup when there
-  // is one, otherwise the warning is noise.
   if (getCurrentScope()) onScopeDispose(stop)
 
   return {
