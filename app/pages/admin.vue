@@ -1,4 +1,9 @@
 <script setup lang="ts">
+  definePageMeta({
+    middleware: 'npts',
+  })
+
+  // Existing code below
   const { data: users, pending, error, refresh } = await useFetch('/api/users')
 
   const archivingUserId = ref<string | null>(null)
