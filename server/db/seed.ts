@@ -10,6 +10,10 @@ const db = drizzle(sqlite, { schema })
 
 const USER_EMAIL = 'seeded-user@email.com'
 const PARTNER_NAME = 'Sample Seeded Project Partner'
+const GITHUB_REPO_ITS = process.env.GITHUB_REPO_ITS ?? ''
+if (!GITHUB_REPO_ITS) {
+  throw new Error('GITHUB_REPO_ITS is not set in .env – add the owner/repo for the seed project.')
+}
 
 type SeededUser = typeof schema.user.$inferSelect
 // An organization is a project partner. The table keeps the Better Auth model
@@ -72,6 +76,30 @@ async function seedAdmin(email: string) {
   console.log({ admin: email })
 }
 
+async function seedProject(partnerId: string) {
+  const existing = await db.query.project.findFirst({
+    where: (p, { eq }) => eq(p.id, 1),
+  })
+
+  if (existing) {
+    console.log({ project: existing })
+    return existing
+  }
+
+  const [created] = await db
+    .insert(schema.project)
+    .values({
+      id: 1,
+      name: 'My Test Project',
+      githubRepo: GITHUB_REPO_ITS,
+      projectPartnerId: partnerId,
+    })
+    .returning()
+
+  console.log({ project: created })
+  return created
+}
+
 async function main() {
   console.log('Start seeding...')
 
@@ -81,6 +109,7 @@ async function main() {
 
   const user = await seedUser()
   const partner = await seedProjectPartner()
+  await seedProject(partner.id)
 
   // Point the seeded user at the partner, which is what makes them an org user
   // rather than a global admin (orgId null).
