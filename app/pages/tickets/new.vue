@@ -69,6 +69,8 @@
         title="Ticket submitted"
         :description="`Ticket #${createdTicket.id} was saved. Status: ${createdTicket.status}.`"
       />
+      <UButton :to="`/tickets/${createdTicket.id}`">View ticket</UButton>
+      <UButton to="/tickets" variant="outline">All tickets</UButton>
       <UButton @click="createdTicket = null">Submit another ticket</UButton>
     </div>
 

@@ -1,14 +1,24 @@
 <script setup lang="ts">
   import type { FormSubmitEvent } from '@nuxt/ui'
-  import { z } from 'zod'
+  import { computed, reactive, watch } from 'vue'
+  import UForm from '@nuxt/ui/components/Form.vue'
+  import UFormField from '@nuxt/ui/components/FormField.vue'
+  import UInput from '@nuxt/ui/components/Input.vue'
+  import UTextarea from '@nuxt/ui/components/Textarea.vue'
+  import USelect from '@nuxt/ui/components/Select.vue'
+  import UButton from '@nuxt/ui/components/Button.vue'
+  import { createTicketSchema } from '../../shared/tickets'
   import type { TicketFormValues, TicketProjectOption } from '../types/ticket'
 
   const props = withDefaults(
     defineProps<{
-      projects: TicketProjectOption[]
+      projects?: TicketProjectOption[]
+      projectId?: number
       submitting?: boolean
+      disabled?: boolean
+      error?: string | null
     }>(),
-    { submitting: false }
+    { projects: () => [], projectId: undefined, submitting: false, disabled: false, error: null }
   )
 
   const emit = defineEmits<{
@@ -16,26 +26,36 @@
   }>()
 
   const state = reactive({
-    projectId: undefined as number | undefined,
+    projectId: props.projectId as number | undefined,
     title: '',
     description: '',
   })
 
+  watch(
+    () => props.projectId,
+    (id) => {
+      state.projectId = id
+    }
+  )
+  const hasProject = computed(() => props.projectId !== undefined || props.projects.length > 0)
+  const blocked = computed(() => props.submitting || props.disabled || !hasProject.value)
   const schema = computed(() =>
-    z.object({
-      projectId: z
-        .number({ error: 'Choose a project.' })
-        .int()
-        .refine((id) => props.projects.some((project) => project.id === id), 'Choose a project.'),
-      title: z.string().trim().min(1, 'Enter a ticket title.'),
-      description: z.string().trim().min(1, 'Describe the issue.'),
+    createTicketSchema.extend({
+      projectId: createTicketSchema.shape.projectId.refine(
+        (id) =>
+          id !== undefined &&
+          (props.projectId !== undefined
+            ? id === props.projectId
+            : props.projects.some((project) => project.id === id)),
+        'Choose a project.'
+      ),
     })
   )
 
   // The parent handles the API request and sets submitting while it saves.
   // The API must independently check project access and validate the payload.
   function handleSubmit(event: FormSubmitEvent<TicketFormValues>) {
-    if (props.submitting || props.projects.length === 0) return
+    if (blocked.value) return
     emit('submit', event.data)
   }
 </script>
@@ -44,15 +64,16 @@
   <UForm
     :schema="schema"
     :state="state"
-    :disabled="submitting || projects.length === 0"
+    :disabled="blocked"
     class="space-y-5"
     @submit="handleSubmit"
   >
-    <p v-if="projects.length === 0" role="status" class="text-muted">
+    <p v-if="error" role="alert" class="text-error">{{ error }}</p>
+    <p v-if="!hasProject" role="status" class="text-muted">
       No projects are available. Contact your NPTS team to get access to a project.
     </p>
 
-    <UFormField label="Project" name="projectId" required>
+    <UFormField v-if="projectId === undefined" label="Project" name="projectId" required>
       <USelect
         v-model="state.projectId"
         :items="projects"
@@ -76,7 +97,7 @@
       />
     </UFormField>
 
-    <UButton type="submit" :disabled="submitting || projects.length === 0">
+    <UButton type="submit" :disabled="blocked">
       {{ submitting ? 'Submitting…' : 'Submit ticket' }}
     </UButton>
   </UForm>
