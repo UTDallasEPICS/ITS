@@ -3,6 +3,8 @@
   import ChatThread from '../components/chat/ChatThread.vue'
   import type { ChatAdapter, ChatConnectionStatus, ChatSubscriptionHandlers, ChatWireMessage } from '../types/chat'
 
+  definePageMeta({ auth: false })
+
   const currentUserId = 'chat-playground-user'
   const authorNames = { [currentUserId]: 'You · NPTS', partner: 'Ada · North Texas Community Center' }
   const sample = [

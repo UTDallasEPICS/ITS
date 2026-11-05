@@ -162,6 +162,51 @@ describe('useChatThread', () => {
     expect(thread.messages.value.map((message) => message.id)).toEqual([1, 2, 3])
   })
 
+  it('loads older pages with a before cursor and reports exhaustion', async () => {
+    const { adapter, loadMessages } = createAdapter()
+    loadMessages.mockResolvedValueOnce({
+      messages: [wireMessage(10)],
+      metadata: { hasMore: true },
+    })
+    loadMessages.mockResolvedValueOnce({
+      messages: [wireMessage(5), wireMessage(6)],
+      metadata: { hasMore: false },
+    })
+
+    const thread = useChatThread(adapter)
+    await thread.start()
+    expect(thread.hasMore.value).toBe(true)
+
+    await expect(thread.loadOlder()).resolves.toBe(true)
+
+    expect(loadMessages).toHaveBeenLastCalledWith({ before: 10 })
+    expect(thread.messages.value.map((message) => message.id)).toEqual([5, 6, 10])
+    expect(thread.hasMore.value).toBe(false)
+    expect(thread.loadingOlder.value).toBe(false)
+  })
+
+  it('drains every page of a reconnect gap', async () => {
+    const { adapter, loadMessages } = createAdapter()
+    loadMessages.mockResolvedValueOnce(page([wireMessage(1)]))
+    loadMessages.mockResolvedValueOnce({
+      messages: [wireMessage(2), wireMessage(3)],
+      metadata: { hasMore: true },
+    })
+    loadMessages.mockResolvedValueOnce({
+      messages: [wireMessage(4)],
+      metadata: { hasMore: false },
+    })
+    const subscription = addSubscription(adapter)
+
+    const thread = useChatThread(adapter)
+    await thread.start()
+    await subscription.handlers?.onResync?.()
+
+    expect(loadMessages).toHaveBeenNthCalledWith(2, { after: 1 })
+    expect(loadMessages).toHaveBeenNthCalledWith(3, { after: 3 })
+    expect(thread.messages.value.map((message) => message.id)).toEqual([1, 2, 3, 4])
+  })
+
   it('surfaces connection transitions from the adapter', async () => {
     const { adapter } = createAdapter()
     const subscription = addSubscription(adapter)

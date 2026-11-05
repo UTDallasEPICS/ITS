@@ -30,8 +30,11 @@
     sendError,
     sending,
     connection,
+    hasMore,
+    loadingOlder,
     start,
     retry,
+    loadOlder,
     sendMessage,
   } = useChatThread(props.adapter)
 
@@ -53,6 +56,18 @@
     unseenMessages.value = false
     await nextTick()
     if (list.value) list.value.scrollTop = list.value.scrollHeight
+  }
+
+  async function loadOlderMessages() {
+    const element = list.value
+    const previousHeight = element?.scrollHeight ?? 0
+    const previousTop = element?.scrollTop ?? 0
+
+    following.value = false
+    if (!(await loadOlder())) return
+
+    await nextTick()
+    if (element) element.scrollTop = element.scrollHeight - previousHeight + previousTop
   }
 
   const canSend = computed(
@@ -83,6 +98,7 @@
   watch(
     () => messages.value.length,
     async () => {
+      if (loadingOlder.value) return
       if (following.value) await scrollToLatest()
       else unseenMessages.value = true
     }
@@ -155,11 +171,18 @@
         <UButton variant="soft" @click="retry()">Try again</UButton>
       </template>
 
-      <p v-else-if="messages.length === 0" role="status" class="text-muted text-sm">
-        No messages yet. Say hello.
-      </p>
+      <template v-else>
+        <div v-if="hasMore" class="flex justify-center pb-2">
+          <UButton variant="soft" size="sm" :loading="loadingOlder" @click="loadOlderMessages">
+            Load older messages
+          </UButton>
+        </div>
 
-      <ul v-else class="space-y-3">
+        <p v-if="messages.length === 0" role="status" class="text-muted text-sm">
+          No messages yet. Say hello.
+        </p>
+
+        <ul v-else class="space-y-3">
         <li
           v-for="message in messages"
           :key="message.id"
@@ -175,8 +198,9 @@
           <p class="text-muted mt-1 text-right text-[11px]">
             {{ formatTimestamp(message.createdAt) }}
           </p>
-        </li>
-      </ul>
+          </li>
+        </ul>
+      </template>
     </div>
 
     <div v-if="unseenMessages" class="flex justify-center border-t border-gray-200 py-2 dark:border-gray-800">

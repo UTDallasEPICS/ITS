@@ -5,9 +5,10 @@ export type { ChatWireMessage }
 export interface ChatAdapter {
   /**
    * Loads a page of messages ordered oldest first. `after` is an exclusive id
-   * cursor used to catch up after a reconnect.
+   * cursor used to catch up after a reconnect; `before` pages backwards through
+   * older history.
    */
-  loadMessages(options?: { after?: number }): Promise<ChatMessagePage>
+  loadMessages(options?: { after?: number, before?: number }): Promise<ChatMessagePage>
   /** Persists a message and returns the stored row. */
   sendMessage(body: string): Promise<ChatWireMessage>
   /** Opens a live feed and returns an unsubscribe function. */

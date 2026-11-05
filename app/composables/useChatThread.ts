@@ -18,6 +18,8 @@ export function useChatThread(adapter: ChatAdapter) {
   const sendError = ref('')
   const sending = ref(false)
   const connection = ref<ChatConnectionStatus>('offline')
+  const hasMore = ref(false)
+  const loadingOlder = ref(false)
 
   let unsubscribe: (() => void) | undefined
 
@@ -37,6 +39,41 @@ export function useChatThread(adapter: ChatAdapter) {
   async function loadHistory(after?: number) {
     const page = await adapter.loadMessages(after === undefined ? undefined : { after })
     mergeMessages(page.messages)
+    if (after === undefined) hasMore.value = page.metadata.hasMore
+  }
+
+  /** Fetches the page before the oldest loaded message, for scroll-up. */
+  async function loadOlder() {
+    if (loadingOlder.value || !hasMore.value) return false
+
+    const oldestId = messages.value[0]?.id
+    if (oldestId === undefined) return false
+
+    loadingOlder.value = true
+    try {
+      const page = await adapter.loadMessages({ before: oldestId })
+      mergeMessages(page.messages)
+      hasMore.value = page.metadata.hasMore
+      return page.messages.length > 0
+    } finally {
+      loadingOlder.value = false
+    }
+  }
+
+  /** Drains the reconnect gap; the API caps a page, so keep asking until done. */
+  async function catchUp() {
+    let cursor = lastMessageId.value || undefined
+
+    // Guard against a server that keeps reporting hasMore without yielding rows.
+    for (let page = 0; page < 100; page += 1) {
+      const result = await adapter.loadMessages(cursor === undefined ? undefined : { after: cursor })
+      mergeMessages(result.messages)
+
+      const newestId = result.messages[result.messages.length - 1]?.id
+      if (newestId !== undefined) cursor = newestId
+
+      if (!result.metadata.hasMore || result.messages.length === 0) return
+    }
   }
 
   function connect() {
@@ -55,7 +92,7 @@ export function useChatThread(adapter: ChatAdapter) {
       // connection has to fetch the gap explicitly.
       onResync: async () => {
         try {
-          await loadHistory(lastMessageId.value || undefined)
+          await catchUp()
         } catch {
           // Keep the thread usable; the next reconnect tries again.
         }
@@ -119,9 +156,12 @@ export function useChatThread(adapter: ChatAdapter) {
     sendError,
     sending,
     connection,
+    hasMore,
+    loadingOlder,
     lastMessageId,
     start,
     retry,
+    loadOlder,
     sendMessage,
     stop,
   }

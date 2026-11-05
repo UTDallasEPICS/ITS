@@ -17,7 +17,7 @@ export type SessionChatFetcher = (
   path: string,
   options?: {
     method?: 'GET' | 'POST'
-    query?: { after: number }
+    query?: { after?: number, before?: number }
     body?: { plainTextBody: string }
   }
 ) => Promise<unknown>
@@ -129,7 +129,14 @@ function connect(hub: SocketHub) {
 
   socket.addEventListener('message', (event) => {
     const frame = parseFrame(event.data)
-    if (frame) sendToSubscribers(hub, frame)
+    if (!frame) return
+
+    if (frame.type === 'ping') {
+      socket.send(JSON.stringify({ type: 'pong' }))
+      return
+    }
+
+    sendToSubscribers(hub, frame)
   })
 
   socket.addEventListener('error', () => {
@@ -182,7 +189,11 @@ export function createSessionChatAdapter(
   threadId: number,
   options: SessionChatAdapterOptions = {}
 ): ChatAdapter {
-  const fetcher: SessionChatFetcher = options.fetchImpl ?? ((path, config) => $fetch(path, config))
+  // `$fetch` resolves typed routes when `experimental.typedPages` is enabled, which
+  // makes its overload too deep to assign to this narrow signature. The runtime
+  // contract (path + options) is the same.
+  const fetcher: SessionChatFetcher =
+    options.fetchImpl ?? ($fetch as unknown as SessionChatFetcher)
   const createSocket = options.createSocket ?? browserSocket
   const url = socketUrl(
     options.origin ??
@@ -190,11 +201,12 @@ export function createSessionChatAdapter(
   )
   const messagesPath = `/api/chat/threads/${threadId}/messages`
 
-  async function loadMessages(loadOptions: { after?: number } = {}) {
-    const after = loadOptions.after
+  async function loadMessages(loadOptions: { after?: number, before?: number } = {}) {
+    const { after, before } = loadOptions
+    const query = after !== undefined ? { after } : before !== undefined ? { before } : undefined
     return (await fetcher(
       messagesPath,
-      after ? { query: { after } } : undefined
+      query ? { query } : undefined
     )) as ChatMessagePage
   }
 

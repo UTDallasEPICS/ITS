@@ -1,7 +1,7 @@
 import { authClient } from '../utils/auth-client'
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (import.meta.dev && to.path === '/dev/chat') return
+  if (to.meta.auth === false) return
 
   const { data: session } = await authClient.useSession(useFetch)
 

@@ -7,8 +7,13 @@ import type { ChatMessagePage, ChatSubscriptionHandlers } from '../../app/types/
 class FakeSocket {
   private listeners = new Map<string, Set<(event: never) => void>>()
   closed = false
+  sent: string[] = []
 
   constructor(readonly url: string) {}
+
+  send(data: string) {
+    this.sent.push(data)
+  }
 
   addEventListener(type: string, listener: (event: never) => void) {
     const listeners = this.listeners.get(type) ?? new Set()
@@ -82,6 +87,32 @@ describe('createSessionChatAdapter', () => {
 
     expect(fetcher.mock.calls[0]).toEqual(['/api/chat/threads/7/messages', undefined])
     expect(fetcher.mock.calls[1]).toEqual(['/api/chat/threads/7/messages', { query: { after: 4 } }])
+  })
+
+  it('loads older history with an exclusive before cursor', async () => {
+    const fetcher = vi.fn<SessionChatFetcher>(async () => emptyPage)
+    const adapter = createSessionChatAdapter(7, { fetchImpl: fetcher })
+
+    await adapter.loadMessages({ before: 9 })
+
+    expect(fetcher).toHaveBeenCalledExactlyOnceWith('/api/chat/threads/7/messages', {
+      query: { before: 9 },
+    })
+  })
+
+  it('answers server pings so the heartbeat keeps the socket open', () => {
+    const { sockets, createSocket } = socketFactory()
+    const adapter = createSessionChatAdapter(7, {
+      origin: 'https://its.example.com',
+      createSocket,
+    })
+    const unsubscribe = adapter.subscribe?.(handlers())
+
+    sockets[0]?.open()
+    sockets[0]?.receive({ type: 'ping' })
+
+    expect(sockets[0]?.sent).toEqual([JSON.stringify({ type: 'pong' })])
+    unsubscribe?.()
   })
 
   it('posts only the message body, never the author', async () => {
