@@ -56,7 +56,9 @@ describe('getOrCreateThread', () => {
     expect(db.select().from(chatThreadMessages).all()).toEqual([
       expect.objectContaining({ threadId: result.thread.id, userId: 'a', plainTextBody: 'Hello' }),
     ])
-    expect(emitChatMessage).not.toHaveBeenCalled()
+    expect(emitChatMessage).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ threadId: result.thread.id, userId: 'a', plainTextBody: 'Hello' }),
+    )
     expect(emitChatThreadCreated).toHaveBeenCalledExactlyOnceWith(result.thread, ['b', 'a'])
   })
 
@@ -120,6 +122,7 @@ describe('getOrCreateThread', () => {
 describe('sendMessage', () => {
   it('saves a member’s message with its sender and thread', async () => {
     const { thread } = await getOrCreateThread(input)
+    vi.mocked(emitChatMessage).mockClear()
     const message = await sendMessage({ threadId: thread.id, userId: 'b', plainTextBody: 'Reply from B' })
     expect(db.select().from(chatThreadMessages).all()).toEqual([
       expect.objectContaining({ threadId: thread.id, userId: 'a', plainTextBody: 'Hello' }),
@@ -130,6 +133,7 @@ describe('sendMessage', () => {
 
   it('rejects a nonmember without saving their message', async () => {
     const { thread } = await getOrCreateThread(input)
+    vi.mocked(emitChatMessage).mockClear()
     await expect(sendMessage({
       threadId: thread.id, userId: 'c', plainTextBody: 'Not a member',
     })).rejects.toThrow()
@@ -147,9 +151,10 @@ describe('sendMessage', () => {
 
   it('keeps the message when a listener fails', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-    vi.mocked(emitChatMessage).mockRejectedValueOnce(new Error('fan-out down'))
     try {
       const { thread } = await getOrCreateThread(input)
+      vi.mocked(emitChatMessage).mockClear()
+      vi.mocked(emitChatMessage).mockRejectedValueOnce(new Error('fan-out down'))
       await expect(sendMessage({
         threadId: thread.id, userId: 'b', plainTextBody: 'Still saved',
       })).resolves.toEqual(expect.objectContaining({ plainTextBody: 'Still saved' }))

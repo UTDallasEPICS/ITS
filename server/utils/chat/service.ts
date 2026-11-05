@@ -35,10 +35,14 @@ type CreateThreadOutput = {
   thread: selectChatThreadsSchema
 }
 
+type CreateThreadTransactionOutput =
+  | { created: false, thread: selectChatThreadsSchema }
+  | { created: true, thread: selectChatThreadsSchema, initialMessage: selectChatThreadMessagesSchema }
+
 export const getOrCreateThread = async (data: CreateThreadInput): Promise<CreateThreadOutput> => {
   const allMembers = [...new Set([...data.otherMembers, data.initialMessage.userId])]
 
-  const result = db.transaction((trx): CreateThreadOutput => {
+  const result = db.transaction((trx): CreateThreadTransactionOutput => {
     const existingThread = findOpenThreadWithThisSetOfMembers(trx, data.projectId, allMembers)
     if (existingThread) {
       return { created: false, thread: existingThread }
@@ -57,9 +61,16 @@ export const getOrCreateThread = async (data: CreateThreadInput): Promise<Create
       .insert(chatThreadMembers)
       .values(allMembers.map(userId => ({ threadId: thread.id, userId })))
       .run()
-    trx.insert(chatThreadMessages).values({ ...data.initialMessage, threadId: thread.id }).run()
+    const initialMessage = trx
+      .insert(chatThreadMessages)
+      .values({ ...data.initialMessage, threadId: thread.id })
+      .returning()
+      .get()
+    if (!initialMessage) {
+      throw new Error("Failed to insert initial chat message.")
+    }
 
-    return { created: true, thread }
+    return { created: true, thread, initialMessage }
   }, { behavior: 'immediate' })
 
   if (result.created) {
@@ -67,6 +78,12 @@ export const getOrCreateThread = async (data: CreateThreadInput): Promise<Create
       await emitChatThreadCreated(result.thread, allMembers)
     } catch (error) {
       console.error('[chat] failed to emit chat:thread-created', error)
+    }
+
+    try {
+      await emitChatMessage(result.initialMessage)
+    } catch (error) {
+      console.error('[chat] failed to emit chat:message', error)
     }
   }
 
