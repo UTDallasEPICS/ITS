@@ -1,3 +1,4 @@
+import { createError, defineEventHandler, getRouterParam } from 'h3'
 import { requireUser } from '../../utils/session'
 import { requireAdmin } from '../../utils/authorization'
 import { db } from '../../utils/db'
@@ -21,6 +22,7 @@ export default defineEventHandler(async (event) => {
   const [targetUser] = await db
     .select({
       id: user.id,
+      orgId: user.orgId,
       isArchived: user.isArchived,
     })
     .from(user)
@@ -37,6 +39,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 404,
       statusMessage: 'User not found',
+    })
+  }
+
+  if (targetUser.orgId === null) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Administrator accounts cannot be archived',
     })
   }
 

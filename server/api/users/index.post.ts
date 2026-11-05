@@ -1,3 +1,4 @@
+import { createError, defineEventHandler, readBody, setResponseStatus } from 'h3'
 import { requireUser } from '../../utils/session'
 import { requireAdmin } from '../../utils/authorization'
 import { db } from '../../utils/db'
@@ -5,13 +6,22 @@ import { user } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 import { validateOrganization } from '../../utils/user-validation'
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default defineEventHandler(async (event) => {
   // guard
   const currentUser = requireUser(event)
   await requireAdmin(currentUser.id)
 
-  const body = await readBody(event)
-  const { name, email, orgId } = body
+  const body = (await readBody(event)) ?? {}
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid request body',
+    })
+  }
+  const { name, email, orgId } = body as { name?: unknown, email?: unknown, orgId?: unknown }
+
   // Validate the name and email
   if (
     typeof name !== 'string' ||
@@ -22,6 +32,13 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       statusMessage: 'Invalid name or email',
+    })
+  }
+
+  if (!EMAIL_PATTERN.test(email.trim())) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid email',
     })
   }
   //  Validate the organization ID
