@@ -7,7 +7,7 @@
   import UTextarea from '@nuxt/ui/components/Textarea.vue'
   import USelect from '@nuxt/ui/components/Select.vue'
   import UButton from '@nuxt/ui/components/Button.vue'
-  import { createTicketSchema } from '../../shared/tickets'
+  import { createTicketSchema } from '#shared/tickets'
   import type { TicketFormValues, TicketProjectOption } from '../types/ticket'
 
   const props = withDefaults(

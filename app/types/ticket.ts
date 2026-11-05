@@ -3,4 +3,4 @@ export type {
   TicketProjectOption,
   TicketSummary,
   TicketDetail,
-} from '../../shared/tickets'
+} from '#shared/tickets'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { updateTicketSchema } from '../../../shared/tickets'
+  import { updateTicketSchema } from '#shared/tickets'
   import type { TicketDetail } from '../../types/ticket'
 
   const route = useRoute()

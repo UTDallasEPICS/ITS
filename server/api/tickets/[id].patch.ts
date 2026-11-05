@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { createError, defineEventHandler, getRouterParam, readBody } from 'h3'
-import { updateTicketSchema } from '../../../shared/tickets'
+import { updateTicketSchema } from '#shared/tickets'
 import { tickets } from '../../db/schema'
 import { db } from '../../utils/db'
 import { requireUser } from '../../utils/session'

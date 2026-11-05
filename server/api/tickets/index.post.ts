@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, readBody, setResponseStatus } from 'h3'
-import { createTicketSchema } from '../../../shared/tickets'
+import { createTicketSchema } from '#shared/tickets'
 import { createTicket } from '../../utils/create-ticket'
 import { requireUser } from '../../utils/session'
 

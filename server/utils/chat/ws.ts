@@ -1,5 +1,5 @@
 import type { Peer } from 'crossws'
-import type { ChatServerFrame, ChatWireMessage, ChatWireThread } from '../../../shared/types/chat'
+import type { ChatServerFrame, ChatWireMessage, ChatWireThread } from '#shared/types/chat'
 import type { selectChatThreadMessagesSchema, selectChatThreadsSchema } from '../../db/schema'
 
 // In-process fan-out. Single-replica deployment is an explicit ADR constraint,
