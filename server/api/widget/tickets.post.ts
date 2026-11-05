@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
-import { createError, defineEventHandler, readBody } from 'h3'
+import { createError, defineEventHandler, readBody, setResponseStatus } from 'h3'
 import { z } from 'zod'
-import { project } from '../../db/schema'
+import { project, tickets } from '../../db/schema'
 import { db } from '../../utils/db'
 
 // Accept only the fields the widget form sends. Project, status, author and
@@ -32,5 +32,25 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Not found' })
   }
 
-  return { ok: true, projectId: targetProject.id }
+  const created = db
+    .insert(tickets)
+    .values({
+      projectId: targetProject.id,
+      title: result.data.title,
+      description: result.data.description,
+      // Widget users have no ITS account, so there is no author.
+      userId: null,
+      status: 'open',
+      timestamp: new Date().toISOString(),
+    })
+    .returning({ id: tickets.id })
+    .get()
+
+  if (!created) {
+    throw createError({ statusCode: 500, statusMessage: 'Unable to create ticket' })
+  }
+
+  // Return only what the widget needs, never other project data.
+  setResponseStatus(event, 201)
+  return { id: created.id }
 })
