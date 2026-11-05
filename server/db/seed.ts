@@ -11,9 +11,6 @@ const db = drizzle(sqlite, { schema })
 const USER_EMAIL = 'seeded-user@email.com'
 const PARTNER_NAME = 'Sample Seeded Project Partner'
 const GITHUB_REPO_ITS = process.env.GITHUB_REPO_ITS ?? ''
-if (!GITHUB_REPO_ITS) {
-  throw new Error('GITHUB_REPO_ITS is not set in .env – add the owner/repo for the seed project.')
-}
 
 type SeededUser = typeof schema.user.$inferSelect
 // An organization is a project partner. The table keeps the Better Auth model
@@ -77,6 +74,11 @@ async function seedAdmin(email: string) {
 }
 
 async function seedProject(partnerId: string) {
+  if (!GITHUB_REPO_ITS) {
+    console.warn('GITHUB_REPO_ITS is not set; skipping the seeded project.')
+    return null
+  }
+
   const existing = await db.query.project.findFirst({
     where: (p, { eq }) => eq(p.id, 1),
   })

@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { createTicketSchema } from '../../shared/tickets'
+import { createTicketSchema } from '#shared/tickets'
 import { tickets } from '../db/schema'
 import { db } from './db'
 import { createGitHubIssue } from './github-issues'
