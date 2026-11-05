@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   requireUser(event)
   const result = createTicketSchema.safeParse(await readBody(event))
   if (!result.success) throw createError({ statusCode: 400, statusMessage: 'Invalid ticket data' })
-  const ticket = createTicket(event, result.data)
+  const ticket = await createTicket(event, result.data)
   setResponseStatus(event, 201)
   return ticket
 })

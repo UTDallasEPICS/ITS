@@ -29,7 +29,7 @@ export function requireAccessibleProject(
   reader: Reader = db
 ) {
   const found = reader
-    .select({ id: project.id })
+    .select({ id: project.id, githubRepo: project.githubRepo })
     .from(project)
     .where(and(eq(project.id, id), projectAccessScope(currentUser)))
     .get()
