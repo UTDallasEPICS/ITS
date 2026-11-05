@@ -43,3 +43,6 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Build widget
+        run: pnpm build:widget
