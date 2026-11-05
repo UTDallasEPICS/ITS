@@ -10,6 +10,7 @@ import { db } from '../../server/utils/db'
 import { auth } from '../../server/utils/auth'
 import { chatSocketHooks } from '../../server/utils/chat/socket'
 import {
+  CHAT_HEARTBEAT_MS,
   publishChatMessage,
   publishThreadCreated,
   stopHeartbeat,
@@ -214,6 +215,39 @@ describe('chat socket open', () => {
     expect(peer.send).toHaveBeenLastCalledWith(JSON.stringify({ type: 'pong' }))
 
     release(peer)
+  })
+
+  it('ignores a frame that is not JSON', () => {
+    const peer = fakePeer({ userId: 'member', threadIds: [] })
+    chatSocketHooks.open!(peer)
+    expect(peer.send).toHaveBeenCalledTimes(1)
+
+    expect(() =>
+      chatSocketHooks.message!(peer, {
+        json: () => {
+          throw new SyntaxError('not json')
+        },
+      } as never),
+    ).not.toThrow()
+
+    expect(peer.send).toHaveBeenCalledTimes(1)
+    release(peer)
+  })
+
+  it('evicts a peer that stops responding to heartbeats', () => {
+    vi.useFakeTimers()
+    try {
+      const peer = fakePeer({ userId: 'member', threadIds: [1] })
+      chatSocketHooks.open!(peer)
+      expect(threadPeerCount(1)).toBe(1)
+
+      vi.advanceTimersByTime(CHAT_HEARTBEAT_MS * 3)
+
+      expect(peer.close).toHaveBeenCalledWith(4401, 'Heartbeat timeout')
+      expect(threadPeerCount(1)).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('unsubscribes on both close and error', () => {

@@ -8,6 +8,7 @@ import {
   startHeartbeat,
   stopHeartbeat,
   subscribePeer,
+  touchPeer,
   unsubscribePeer,
 } from './ws'
 
@@ -41,7 +42,16 @@ export const chatSocketHooks: Partial<Hooks> = {
   },
 
   message(peer, message) {
-    const frame = message.json<{ type?: string }>()
+    touchPeer(peer)
+
+    let frame: { type?: string } | undefined
+    try {
+      frame = message.json<{ type?: string }>()
+    } catch {
+      // Ignore frames that are not JSON; the peer stays connected.
+      return
+    }
+
     if (frame?.type === 'ping') {
       sendFrame(peer, { type: 'pong' })
     }

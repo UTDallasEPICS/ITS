@@ -12,7 +12,8 @@ type Subscription = {
 const peersByThread = new Map<number, Set<Peer>>()
 const peersByUser = new Map<string, Set<Peer>>()
 const subscriptions = new Map<Peer, Subscription>()
-const heartbeats = new Map<Peer, ReturnType<typeof setInterval>>()
+const heartbeats = new Map<Peer, NodeJS.Timeout>()
+const lastSeen = new Map<Peer, number>()
 
 export const CHAT_HEARTBEAT_MS = 25_000
 
@@ -28,6 +29,7 @@ function indexThread(peer: Peer, threadId: number) {
 export function subscribePeer(userId: string, threadIds: number[], peer: Peer) {
   const subscription: Subscription = { userId, threadIds: new Set(threadIds) }
   subscriptions.set(peer, subscription)
+  lastSeen.set(peer, Date.now())
 
   for (const threadId of subscription.threadIds) indexThread(peer, threadId)
 
@@ -58,6 +60,12 @@ export function unsubscribePeer(peer: Peer) {
   }
 
   subscriptions.delete(peer)
+  lastSeen.delete(peer)
+}
+
+/** Marks a peer as alive; called for every inbound frame. */
+export function touchPeer(peer: Peer) {
+  if (subscriptions.has(peer)) lastSeen.set(peer, Date.now())
 }
 
 export function threadPeerCount(threadId: number) {
@@ -122,7 +130,17 @@ export function startHeartbeat(peer: Peer) {
   stopHeartbeat(peer)
   heartbeats.set(
     peer,
-    setInterval(() => sendFrame(peer, { type: 'ping' }), CHAT_HEARTBEAT_MS),
+    setInterval(() => {
+      const seen = lastSeen.get(peer)
+      if (seen === undefined || Date.now() - seen > CHAT_HEARTBEAT_MS * 2) {
+        stopHeartbeat(peer)
+        unsubscribePeer(peer)
+        peer.close(4401, 'Heartbeat timeout')
+        return
+      }
+
+      sendFrame(peer, { type: 'ping' })
+    }, CHAT_HEARTBEAT_MS),
   )
 }
 
