@@ -13,9 +13,10 @@ export async function requireThreadAccess(userId: string, threadId: number) {
     .innerJoin(user, eq(user.id, userId))
     .where(and(
       eq(chatThreads.id, threadId),
+      exists(membership),
       or(
         isNull(user.orgId),
-        and(eq(user.orgId, project.projectPartnerId), exists(membership)),
+        eq(user.orgId, project.projectPartnerId),
       ),
     ))
     .limit(1)

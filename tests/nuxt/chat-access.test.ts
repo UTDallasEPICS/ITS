@@ -47,7 +47,12 @@ beforeEach(() => {
 afterAll(() => db.$client.close())
 
 describe('requireThreadAccess', () => {
-  it('lets NPTS into a thread they are not a member of', async () => {
+  it('hides a thread from NPTS users who are not members', async () => {
+    await expect(requireThreadAccess('npts', threadId)).rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('lets an NPTS user who is a member into the thread', async () => {
+    db.insert(chatThreadMembers).values({ threadId, userId: 'npts' }).run()
     await expect(requireThreadAccess('npts', threadId)).resolves.toMatchObject({ id: threadId })
   })
 
