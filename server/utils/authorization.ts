@@ -3,7 +3,7 @@ import { db } from './db'
 import { user, project } from '../db/schema'
 
 // orgId is null for admin users
-function isAdmin(orgId: string | null) {
+export function isAdmin(orgId: string | null) {
   return orgId === null
 }
 
