@@ -16,10 +16,15 @@
   const result = ref<'idle' | 'sent' | 'error'>('idle')
   const message = ref('')
 
+  // Reachability check only: /api/health does not validate the site tag yet.
+  // Site-tag validation lands with the widget submission endpoint in #32.
+
   async function checkConnection() {
     state.value = 'loading'
     try {
-      const res = await fetch(`${props.apiBase}/api/health?siteTag=${props.siteTag}`)
+      const res = await fetch(
+        `${props.apiBase}/api/health?siteTag=${encodeURIComponent(props.siteTag)}`
+      )
       state.value = res.ok ? 'ok' : 'error'
     } catch {
       state.value = 'error'

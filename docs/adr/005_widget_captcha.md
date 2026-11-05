@@ -77,7 +77,7 @@ ITS gives the browser a small math problem (proof-of-work). The browser solves i
 
 **Chosen Option:** Option 3 — ALTCHA (to be confirmed with the mentor). Option 2 — Turnstile is the fallback.
 
-The hardest constraints for us are many partner domains and rotating team members. ALTCHA has no account and no domain list to manage outside ITS, and it is free at any volume. Its weaker bot detection is acceptable because our traffic is expected to be low and the CAPTCHA is not the only protection: the API also uses site tag checks and rate limits with cooldown.
+The hardest constraints for us are many partner domains and rotating team members. ALTCHA has no account and no domain list to manage outside ITS, and it is free at any volume. Its weaker bot detection is acceptable because our traffic is expected to be low and the CAPTCHA is not the only planned protection: the API will also use site tag checks and rate limits with cooldown once #32 lands.
 
 reCAPTCHA is not chosen because its monthly limit can be used up by an attack, and it sends user data to Google. If ALTCHA is not enough, Turnstile is the next choice, since it is free with no limit and has strong detection.
 
