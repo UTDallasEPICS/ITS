@@ -28,9 +28,9 @@ A separate Vite build bundles Vue and the widget into one script (`/widget/v1/it
 
 - Good CSS isolation in both directions. Tested on the sample site with `button { background: hotpink !important }` and the widget wasn't affected.
 - Small: one file, including Vue.
-- Partners can customize it with their own CSS through CSS variables (e.g. `its-widget { --its-primary: red }`) and `::part()`, but only the parts we expose, so they can't accidentally break it.
-- Widget state can be exposed with attributes and DOM events (e.g. `<its-widget open>`, an `open` event), so partners can style or react to it.
-- Plain Vue components can be shared with the ITS app. Tested with `app/components/shared/StatusPill.vue`, which renders in both.
+- Partners will be able to customize it with their own CSS through the CSS variables and `::part()` surfaces exposed in `v1`; nothing beyond those parts is stable.
+- Widget state can later be exposed with attributes and DOM events (e.g. `<its-widget open>`, an `open` event); the initial build does not implement this.
+- Plain Vue components can be shared with the ITS app. The widget imports `app/components/shared/StatusPill.vue`; the app does not consume it yet.
 
 **Cons:**
 

@@ -11,16 +11,19 @@
   const state = ref<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const detail = ref('')
 
-  // Same request as before, now drives the shared StatusPill
+  // Reachability check only: /api/health does not validate the site tag yet.
+  // Site-tag validation lands with the widget submission endpoint in #32.
   async function checkConnection() {
     state.value = 'loading'
     detail.value = ''
     try {
-      const res = await fetch(`${props.apiBase}/api/health?siteTag=${props.siteTag}`)
+      const res = await fetch(
+        `${props.apiBase}/api/health?siteTag=${encodeURIComponent(props.siteTag)}`
+      )
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       state.value = 'ok'
-      detail.value = `site tag: ${props.siteTag}, time: ${data.timestamp}`
+      detail.value = `site tag: ${props.siteTag}, server time: ${data.timestamp}`
     } catch (err) {
       state.value = 'error'
       detail.value = String(err)

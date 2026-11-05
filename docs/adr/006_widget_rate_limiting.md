@@ -80,9 +80,9 @@ Using site tag + IP instead of only IP means people who share an IP on different
 
 ### Positive Consequences
 
-- Floods are stopped before a ticket is created.
-- Users get a clear message about when they can try again.
-- The rules are covered by unit tests.
+- Once #32 ships, floods will be stopped before a ticket is created.
+- Users will get a clear message about when they can try again.
+- The rules will be covered by unit tests in #32.
 
 ### Negative Consequences / Trade-offs
 
