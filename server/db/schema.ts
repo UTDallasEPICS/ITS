@@ -16,6 +16,7 @@ export const user = sqliteTable('user', {
   email: text('email').notNull(),
   emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull().default(false),
   image: text('image'),
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   // Omitted orgId defaults to NULL in SQLite: NPTS access. Set an org for partners.

@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `isArchived` integer DEFAULT false NOT NULL;
