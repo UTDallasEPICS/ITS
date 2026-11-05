@@ -1,7 +1,14 @@
 <script setup lang="ts">
   import { authClient } from '../utils/auth-client'
+  import { clearChatDrafts } from '../utils/chat-drafts'
+  import { useNptsAccess } from '../composables/useNptsAccess'
 
-  const { data: users, pending, error } = await useFetch('/api/users')
+  const { isAdmin, checkAdmin } = useNptsAccess()
+  await checkAdmin()
+
+  const { data: users, pending, error } = await useFetch('/api/users', {
+    immediate: isAdmin.value,
+  })
 
   const selectedFile = ref<File | null>(null)
   const imagePreview = ref<string>('')
@@ -9,7 +16,9 @@
   const isModalOpen = ref(false)
 
   async function logout() {
-    await authClient.signOut()
+    const result = await authClient.signOut()
+    if (result.error) return
+    clearChatDrafts()
     await navigateTo('/auth', { external: true })
   }
 
@@ -85,7 +94,9 @@
         </p>
       </div>
       <div class="flex flex-wrap justify-between gap-4 md:items-center">
+        <UButton to="/tickets" variant="outline">View tickets</UButton>
         <UButton to="/tickets/new">New ticket</UButton>
+        <UButton v-if="isAdmin" to="/admin" variant="outline">Manage users</UButton>
         <UModal :open="isModalOpen">
           <UButton
             color="success"
@@ -138,7 +149,7 @@
       </div>
     </div>
 
-    <UCard class="w-full">
+    <UCard v-if="isAdmin" class="w-full">
       <template #header>
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">

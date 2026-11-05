@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import type z from 'zod'
 
 export const organization = sqliteTable('organization', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -15,6 +16,7 @@ export const user = sqliteTable('user', {
   email: text('email').notNull(),
   emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull().default(false),
   image: text('image'),
+  isArchived: integer('isArchived', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   // Omitted orgId defaults to NULL in SQLite: NPTS access. Set an org for partners.
@@ -191,8 +193,13 @@ export const selectTicketsSchema = createSelectSchema(tickets)
 export const insertTicketsSchema = createInsertSchema(tickets)
 
 export const selectChatThreadsSchema = createSelectSchema(chatThreads)
+export type selectChatThreadsSchema = z.infer<typeof selectChatThreadsSchema>
 export const insertChatThreadsSchema = createInsertSchema(chatThreads)
+export type insertChatThreadsSchema = z.infer<typeof insertChatThreadsSchema>
 export const selectChatThreadMessagesSchema = createSelectSchema(chatThreadMessages)
+export type selectChatThreadMessagesSchema = z.infer<typeof selectChatThreadMessagesSchema>
 export const insertChatThreadMessagesSchema = createInsertSchema(chatThreadMessages)
+export type insertChatThreadMessagesSchema = z.infer<typeof insertChatThreadMessagesSchema>
 export const selectChatThreadMembersSchema = createSelectSchema(chatThreadMembers)
 export const insertChatThreadMembersSchema = createInsertSchema(chatThreadMembers)
+export type insertChatThreadMembersSchema = z.infer<typeof insertChatThreadMembersSchema>
