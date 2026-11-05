@@ -5,6 +5,7 @@
 
   // Existing code below
   const { data: users, pending, error, refresh } = await useFetch('/api/users')
+  const { data: organizations } = await useFetch('/api/organizations')
 
   const archivingUserId = ref<string | null>(null)
   const showAddUserForm = ref(false)
@@ -141,7 +142,12 @@
 
           <input v-model="newUser.email" type="email" placeholder="Email address" required />
 
-          <input v-model="newUser.orgId" type="text" placeholder="Organization ID" required />
+          <select v-model="newUser.orgId" required>
+            <option value="" disabled>Select organization</option>
+            <option v-for="org in organizations ?? []" :key="org.id" :value="org.id">
+              {{ org.name }}
+            </option>
+          </select>
 
           <button type="submit" class="add-button" :disabled="creatingUser">
             {{ creatingUser ? 'Creating...' : 'Create User' }}
@@ -176,13 +182,12 @@
 
                 <td>
                   <div v-if="editingUserId === user.id" class="role-editor">
-                    <input
-                      v-model="selectedOrgId"
-                      type="text"
-                      placeholder="Organization ID"
-                      class="role-input"
-                      :disabled="updatingRole"
-                    />
+                    <select v-model="selectedOrgId" class="role-input" :disabled="updatingRole">
+                      <option value="" disabled>Select organization</option>
+                      <option v-for="org in organizations ?? []" :key="org.id" :value="org.id">
+                        {{ org.name }}
+                      </option>
+                    </select>
 
                     <button
                       class="save-role-button"
@@ -203,7 +208,11 @@
 
                   <div v-else class="role-display">
                     <span class="role-label">
-                      {{ user.orgId === null ? 'Admin' : 'Partner' }}
+                      {{
+                        user.orgId === null
+                          ? 'Admin'
+                          : (organizations?.find((org) => org.id === user.orgId)?.name ?? 'Partner')
+                      }}
                     </span>
 
                     <button
@@ -358,7 +367,8 @@
     border-top: 1px solid #334155;
   }
 
-  .add-user-form input {
+  .add-user-form input,
+  .add-user-form select {
     flex: 1 1 180px;
     min-width: 0;
     background: #0f172a;
@@ -372,7 +382,8 @@
     color: #94a3b8;
   }
 
-  .add-user-form input:focus {
+  .add-user-form input:focus,
+  .add-user-form select:focus {
     outline: none;
     border-color: #60a5fa;
   }
