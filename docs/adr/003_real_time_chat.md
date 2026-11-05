@@ -95,10 +95,6 @@ This is basically the same as option 4, but uses unstorage as a facade/wrapper l
 
 ### Rationale
 
-Explain why this option was selected over the others. Connect the decision back to the goals and constraints in Section 2.
-
-> Example: We chose Option 2 because it meets our cost budget of under $5 while providing significantly better read/write speed than Option 1. Although Option 3 offered better long-term reliability, its high unit price makes it unfeasible for our production scale.
-
 The first decision was effectively 'polling or websockets?', which was pretty much decided based on engineering effort / most optimal UX. On the frontend, both methods are mostly the same from a state management perspective: either way, we're getting new messages and having to update what is being rendered on screen as the client gets new messages, and both long polling and WebSockets would need some extra logic to handle starting + stopping subscriptions. 
 
 WebSockets do introduce a little bit of additional complexity. Connections get dropped when the server reboots (ex: new update deployment) so the client needs to handle reconnecting cleanly. Long-running connections mean specific considerations around deployment - you must use some sort of long-lived server, and you must only use one deployed server OR architect your multi-instance deployment to handle sticky sessions or some mechanism for pub/sub. 
