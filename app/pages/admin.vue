@@ -15,9 +15,14 @@
     name: '',
     email: '',
     orgId: '',
+    role: 'partner' as 'admin' | 'partner',
   })
 
   const isNewNptsUser = computed(() => newUser.email.trim().toLowerCase().endsWith('@npts.tech'))
+
+  watch(isNewNptsUser, (isNpts) => {
+    if (isNpts) newUser.role = 'admin'
+  })
 
   async function createUser() {
     try {
@@ -29,6 +34,7 @@
           name: newUser.name,
           email: newUser.email,
           orgId: newUser.orgId,
+          role: isNewNptsUser.value ? 'admin' : newUser.role,
         },
       })
 
@@ -37,6 +43,7 @@
       newUser.name = ''
       newUser.email = ''
       newUser.orgId = ''
+      newUser.role = 'partner'
       showAddUserForm.value = false
 
       window.alert('User created successfully!')
@@ -171,12 +178,21 @@
             required
           />
 
+          <select
+            v-model="newUser.role"
+            class="min-w-0 flex-[1_1_180px] rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-slate-50 focus:border-blue-400 focus:outline-none disabled:opacity-60"
+            :disabled="isNewNptsUser"
+          >
+            <option value="partner">Partner</option>
+            <option value="admin">Admin (no organization)</option>
+          </select>
+
           <p v-if="isNewNptsUser" class="w-full text-xs text-blue-300">
             NPTS email detected — this account will be created as an administrator.
           </p>
 
           <select
-            v-if="!isNewNptsUser"
+            v-if="!isNewNptsUser && newUser.role === 'partner'"
             v-model="newUser.orgId"
             class="min-w-0 flex-[1_1_180px] rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-slate-50 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
             required

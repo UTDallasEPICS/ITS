@@ -20,7 +20,19 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Invalid request body',
     })
   }
-  const { name, email, orgId } = body as { name?: unknown; email?: unknown; orgId?: unknown }
+  const { name, email, orgId, role } = body as {
+    name?: unknown
+    email?: unknown
+    orgId?: unknown
+    role?: unknown
+  }
+
+  if (role !== undefined && role !== 'admin' && role !== 'partner') {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid role',
+    })
+  }
 
   // Validate the name and email
   if (
@@ -44,12 +56,12 @@ export default defineEventHandler(async (event) => {
 
   const normalizedEmail = email.trim().toLowerCase()
   const isNptsEmail = normalizedEmail.endsWith('@npts.tech')
-  //  Validate the organization ID
-  // NPTS email accounts are administrators (orgId = null).
-  // Partner accounts must belong to a valid organization.
-  const validatedOrgId = isNptsEmail ? null : await validateOrganization(orgId)
+  // The NPTS domain always maps to an administrator. Otherwise the caller may
+  // request an administrator explicitly, or create a partner with an organization.
+  const isAdminUser = isNptsEmail || role === 'admin'
+  const validatedOrgId = isAdminUser ? null : await validateOrganization(orgId)
 
-  if (!isNptsEmail && validatedOrgId === null) {
+  if (!isAdminUser && validatedOrgId === null) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Partner users must belong to an organization',
