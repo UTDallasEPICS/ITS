@@ -49,10 +49,7 @@ async function seedProjectPartner(): Promise<SeededProjectPartner> {
     return existing
   }
 
-  const [created] = await db
-    .insert(schema.organization)
-    .values({ name: PARTNER_NAME })
-    .returning()
+  const [created] = await db.insert(schema.organization).values({ name: PARTNER_NAME }).returning()
 
   if (!created) {
     throw new Error(`failed to seed project partner ${PARTNER_NAME}`)
@@ -66,11 +63,29 @@ async function seedProjectPartner(): Promise<SeededProjectPartner> {
 // The migration Lambda passes SEED_* vars from the env file; orgId stays null,
 // which gives this user NPTS (global) access.
 async function seedAdmin(email: string) {
-  await db
-    .insert(schema.user)
-    .values({ email, name: 'NPTS Admin' })
-    .onConflictDoNothing({ target: schema.user.email })
-  console.log({ admin: email })
+  const normalizedEmail = email.trim().toLowerCase()
+
+  const existing = await db.query.user.findFirst({
+    where: (u, { eq }) => eq(u.email, normalizedEmail),
+  })
+
+  if (existing) {
+    if (existing.orgId !== null) {
+      console.warn(`Skipping ${normalizedEmail}: existing account belongs to an organization.`)
+      return
+    }
+
+    console.log(`Admin already exists: ${normalizedEmail}`)
+    return
+  }
+
+  await db.insert(schema.user).values({
+    email: normalizedEmail,
+    name: 'NPTS Admin',
+    orgId: null,
+  })
+
+  console.log(`Admin created: ${normalizedEmail}`)
 }
 
 async function seedProject(partnerId: string) {
@@ -105,8 +120,24 @@ async function seedProject(partnerId: string) {
 async function main() {
   console.log('Start seeding...')
 
+  // Seed NPTS team members as administrators. SEED_ADMIN_EMAIL can add one
+  // deployment-specific admin without changing this list.
+  const adminEmails = new Set([
+    'seth2stephens@gmail.com',
+    'kevj.antony@gmail.com',
+    'hey@jasonaa.me',
+    'kimwan8076@gmail.com',
+    'sjaryan2007@gmail.com',
+    'samhappy8910@gmail.com',
+    'tushar.wani@npts.tech',
+  ])
+
   if (process.env.SEED_ADMIN_EMAIL) {
-    await seedAdmin(process.env.SEED_ADMIN_EMAIL)
+    adminEmails.add(process.env.SEED_ADMIN_EMAIL)
+  }
+
+  for (const email of adminEmails) {
+    await seedAdmin(email)
   }
 
   const user = await seedUser()

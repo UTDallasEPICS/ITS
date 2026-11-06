@@ -120,6 +120,63 @@ describe('POST /api/users', () => {
     expect(response.status).toBe(400)
     expect(await response.json()).toMatchObject({ statusMessage: 'Invalid email' })
   })
+
+  it('creates an explicit administrator without an organization', async () => {
+    const response = await call(createUser, '/api/users', identity('admin'), json({
+      name: 'Lead',
+      email: 'lead@example.com',
+      role: 'admin',
+      orgId: 'org-a',
+    }))
+
+    expect(response.status).toBe(201)
+    expect(db.select().from(user).where(eq(user.email, 'lead@example.com')).get()?.orgId).toBeNull()
+  })
+
+  it('keeps the NPTS domain authoritative over an explicit partner role', async () => {
+    const response = await call(createUser, '/api/users', identity('admin'), json({
+      name: 'Staff',
+      email: 'other.staff@npts.tech',
+      role: 'partner',
+      orgId: 'org-a',
+    }))
+
+    expect(response.status).toBe(201)
+    expect(
+      db.select().from(user).where(eq(user.email, 'other.staff@npts.tech')).get()?.orgId,
+    ).toBeNull()
+  })
+
+  it('rejects an unknown role', async () => {
+    const response = await call(createUser, '/api/users', identity('admin'), json({
+      name: 'Bad',
+      email: 'bad@example.com',
+      role: 'owner',
+      orgId: 'org-a',
+    }))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('creates an @npts.tech account as an administrator', async () => {
+    const response = await call(createUser, '/api/users', identity('admin'), json({
+      name: 'New Staff',
+      email: 'new.staff@npts.tech',
+      orgId: 'org-a',
+    }))
+
+    expect(response.status).toBe(201)
+    expect(db.select().from(user).where(eq(user.email, 'new.staff@npts.tech')).get()?.orgId).toBeNull()
+  })
+
+  it('rejects a partner account without an organization', async () => {
+    const response = await call(createUser, '/api/users', identity('admin'), json({
+      name: 'No Org',
+      email: 'noorg@example.com',
+    }))
+
+    expect(response.status).toBe(400)
+  })
 })
 
 describe('PATCH /api/users/:id', () => {

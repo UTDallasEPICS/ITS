@@ -38,11 +38,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Prevent users from changing their own role and from editing administrators
+  // Prevent users from changing their own organization and from editing administrators
   if (currentUser.id === targetUserId) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'You cannot change your own role',
+      statusMessage: 'You cannot change your own organization',
     })
   }
 
@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
   }
 
   return {
-    message: 'User role updated successfully',
+    message: 'User organization updated successfully',
     user: updatedUser,
   }
 })
