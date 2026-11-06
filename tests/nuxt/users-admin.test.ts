@@ -120,6 +120,26 @@ describe('POST /api/users', () => {
     expect(response.status).toBe(400)
     expect(await response.json()).toMatchObject({ statusMessage: 'Invalid email' })
   })
+
+  it('creates an @npts.tech account as an administrator', async () => {
+    const response = await call(createUser, '/api/users', identity('admin'), json({
+      name: 'New Staff',
+      email: 'new.staff@npts.tech',
+      orgId: 'org-a',
+    }))
+
+    expect(response.status).toBe(201)
+    expect(db.select().from(user).where(eq(user.email, 'new.staff@npts.tech')).get()?.orgId).toBeNull()
+  })
+
+  it('rejects a partner account without an organization', async () => {
+    const response = await call(createUser, '/api/users', identity('admin'), json({
+      name: 'No Org',
+      email: 'noorg@example.com',
+    }))
+
+    expect(response.status).toBe(400)
+  })
 })
 
 describe('PATCH /api/users/:id', () => {

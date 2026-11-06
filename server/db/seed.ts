@@ -71,7 +71,8 @@ async function seedAdmin(email: string) {
 
   if (existing) {
     if (existing.orgId !== null) {
-      throw new Error(`Admin account has an organization assigned: ${normalizedEmail}`)
+      console.warn(`Skipping ${normalizedEmail}: existing account belongs to an organization.`)
+      return
     }
 
     console.log(`Admin already exists: ${normalizedEmail}`)
@@ -119,8 +120,9 @@ async function seedProject(partnerId: string) {
 async function main() {
   console.log('Start seeding...')
 
-  // Seed NPTS team members as administrators.
-  const adminEmails = [
+  // Seed NPTS team members as administrators. SEED_ADMIN_EMAIL can add one
+  // deployment-specific admin without changing this list.
+  const adminEmails = new Set([
     'seth2stephens@gmail.com',
     'kevj.antony@gmail.com',
     'hey@jasonaa.me',
@@ -128,7 +130,11 @@ async function main() {
     'sjaryan2007@gmail.com',
     'samhappy8910@gmail.com',
     'tushar.wani@npts.tech',
-  ]
+  ])
+
+  if (process.env.SEED_ADMIN_EMAIL) {
+    adminEmails.add(process.env.SEED_ADMIN_EMAIL)
+  }
 
   for (const email of adminEmails) {
     await seedAdmin(email)

@@ -171,6 +171,10 @@
             required
           />
 
+          <p v-if="isNewNptsUser" class="w-full text-xs text-blue-300">
+            NPTS email detected — this account will be created as an administrator.
+          </p>
+
           <select
             v-if="!isNewNptsUser"
             v-model="newUser.orgId"
