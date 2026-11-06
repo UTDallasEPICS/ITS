@@ -133,6 +133,7 @@ describe('new ticket page', () => {
     })
     expect(wrapper.get('[role="status"]').text()).toContain('Ticket #42 was saved. Status: open.')
     expect(wrapper.find('form').exists()).toBe(false)
+    expect(wrapper.get('a[href="/tickets/42"]').text()).toBe('View ticket')
 
     const another = wrapper
       .findAll('button')
@@ -194,6 +195,7 @@ describe('new ticket page', () => {
     })
     try {
       expect(dashboard.get('a[href="/tickets/new"]').text()).toBe('New ticket')
+      expect(dashboard.get('a[href="/tickets"]').text()).toBe('View tickets')
     } finally {
       dashboard.unmount()
     }

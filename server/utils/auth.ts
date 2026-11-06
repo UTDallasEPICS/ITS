@@ -3,6 +3,9 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from './db'
 import { env } from './env'
 import { emailOTP } from 'better-auth/plugins/email-otp'
+import { eq } from 'drizzle-orm'
+import { user } from '../db/schema'
+import { APIError } from 'better-auth/api'
 import nodemailer from 'nodemailer'
 
 const transporter = nodemailer.createTransport({
@@ -21,6 +24,24 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: 'sqlite',
   }),
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (newSession) => {
+          const [foundUser] = await db
+            .select({ isArchived: user.isArchived })
+            .from(user)
+            .where(eq(user.id, newSession.userId))
+
+          if (!foundUser || foundUser.isArchived) {
+            throw new APIError('FORBIDDEN', {
+              message: 'Account is unavailable',
+            })
+          }
+        },
+      },
+    },
+  },
   plugins: [
     emailOTP({
       // Only provisioned users may sign in: a new user without an org would be NPTS.

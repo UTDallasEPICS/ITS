@@ -113,86 +113,151 @@
 </script>
 
 <template>
-  <main class="admin-page">
-    <div class="dashboard">
-      <header class="page-header">
+  <main class="min-h-screen bg-slate-900 px-3 py-6 text-slate-50 sm:px-6 sm:py-12">
+    <div class="mx-auto max-w-[1200px]">
+      <header class="mb-8">
         <div>
-          <p class="eyebrow">ADMIN DASHBOARD</p>
-          <h1>User Management</h1>
-          <p class="subtitle">Manage users, organizations, and account access.</p>
+          <p class="mb-3 text-xs font-bold tracking-[2px] text-blue-400">ADMIN DASHBOARD</p>
+
+          <h1 class="mb-2 text-3xl font-bold">User Management</h1>
+
+          <p class="text-[15px] text-slate-400">Manage users, organizations, and account access.</p>
         </div>
       </header>
 
-      <section class="users-card">
-        <div class="card-header">
+      <section class="overflow-hidden rounded-[14px] border border-slate-700 bg-slate-800">
+        <div
+          class="flex flex-col items-start justify-between gap-4 p-6 sm:flex-row sm:items-center"
+        >
           <div>
-            <h2>Registered Users</h2>
-            <p>View and manage registered accounts.</p>
+            <h2 class="mb-1.5 text-lg font-semibold">Registered Users</h2>
+            <p class="text-[13px] text-slate-400">View and manage registered accounts.</p>
           </div>
 
-          <div class="header-actions">
-            <span class="user-count"> {{ users?.length ?? 0 }} users </span>
+          <div class="flex items-center gap-3">
+            <span
+              class="rounded-full bg-slate-700 px-3 py-1.5 text-xs whitespace-nowrap text-slate-300"
+            >
+              {{ users?.length ?? 0 }} users
+            </span>
 
-            <button type="button" class="add-button" @click="showAddUserForm = !showAddUserForm">
+            <button
+              type="button"
+              class="rounded-lg bg-blue-600 px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-400"
+              @click="showAddUserForm = !showAddUserForm"
+            >
               {{ showAddUserForm ? 'Cancel' : '+ Add User' }}
             </button>
           </div>
         </div>
+        <form
+          v-if="showAddUserForm"
+          class="flex flex-wrap gap-3 border-t border-slate-700 px-6 py-5"
+          @submit.prevent="createUser"
+        >
+          <input
+            v-model="newUser.name"
+            type="text"
+            placeholder="Full name"
+            class="min-w-0 flex-[1_1_180px] rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-slate-50 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
+            required
+          />
 
-        <form v-if="showAddUserForm" class="add-user-form" @submit.prevent="createUser">
-          <input v-model="newUser.name" type="text" placeholder="Full name" required />
+          <input
+            v-model="newUser.email"
+            type="email"
+            placeholder="Email address"
+            class="min-w-0 flex-[1_1_180px] rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-slate-50 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
+            required
+          />
 
-          <input v-model="newUser.email" type="email" placeholder="Email address" required />
-
-          <select v-if="!isNewNptsUser" v-model="newUser.orgId" required>
+          <select
+            v-if="!isNewNptsUser"
+            v-model="newUser.orgId"
+            class="min-w-0 flex-[1_1_180px] rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-slate-50 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
+            required
+          >
             <option value="" disabled>Select organization</option>
             <option v-for="org in organizations ?? []" :key="org.id" :value="org.id">
               {{ org.name }}
             </option>
           </select>
 
-          <button type="submit" class="add-button" :disabled="creatingUser">
+          <button
+            type="submit"
+            class="rounded-lg bg-blue-600 px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-400"
+            :disabled="creatingUser"
+          >
             {{ creatingUser ? 'Creating...' : 'Create User' }}
           </button>
         </form>
 
-        <p v-if="pending" class="message">Loading users...</p>
+        <p v-if="pending" class="p-6 text-slate-400">Loading users...</p>
 
-        <p v-else-if="error" class="message error">Failed to load users.</p>
+        <p v-else-if="error" class="p-6 text-red-300">Failed to load users.</p>
 
-        <div v-else class="table-container">
-          <table>
-            <thead>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full border-collapse text-left">
+            <thead class="bg-[#172235]">
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Organization</th>
-                <th>Status</th>
-                <th>Action</th>
+                <th
+                  class="px-6 py-4 text-xs font-semibold tracking-wide text-slate-400 uppercase max-sm:px-3"
+                >
+                  Name
+                </th>
+                <th
+                  class="px-6 py-4 text-xs font-semibold tracking-wide text-slate-400 uppercase max-sm:px-3"
+                >
+                  Email
+                </th>
+                <th
+                  class="px-6 py-4 text-xs font-semibold tracking-wide text-slate-400 uppercase max-sm:px-3"
+                >
+                  Organization
+                </th>
+                <th
+                  class="px-6 py-4 text-xs font-semibold tracking-wide text-slate-400 uppercase max-sm:px-3"
+                >
+                  Status
+                </th>
+                <th
+                  class="px-6 py-4 text-xs font-semibold tracking-wide text-slate-400 uppercase max-sm:px-3"
+                >
+                  Action
+                </th>
               </tr>
             </thead>
 
             <tbody>
-              <tr v-for="user in users" :key="user.id">
-                <td class="name-cell">
+              <tr v-for="user in users" :key="user.id" class="hover:bg-[#263449]">
+                <td
+                  class="border-t border-slate-700 px-6 py-[18px] text-sm font-semibold whitespace-nowrap max-sm:px-3 max-sm:py-3.5"
+                >
                   {{ user.name || 'Unnamed User' }}
                 </td>
 
-                <td class="email-cell">
+                <td
+                  class="border-t border-slate-700 px-6 py-[18px] text-sm text-slate-300 max-sm:px-3 max-sm:py-3.5"
+                >
                   {{ user.email }}
                 </td>
 
-                <td>
-                  <div v-if="editingUserId === user.id" class="org-editor">
-                    <select v-model="selectedOrgId" class="org-input" :disabled="updatingOrg">
+                <td
+                  class="border-t border-slate-700 px-6 py-[18px] text-sm max-sm:px-3 max-sm:py-3.5"
+                >
+                  <div v-if="editingUserId === user.id" class="flex items-center gap-2">
+                    <select
+                      v-model="selectedOrgId"
+                      class="w-[180px] rounded-md border border-slate-600 bg-slate-900 px-2.5 py-2 text-[13px] text-slate-50 disabled:opacity-50"
+                      :disabled="updatingOrg"
+                    >
                       <option value="" disabled>Select organization</option>
                       <option v-for="org in organizations ?? []" :key="org.id" :value="org.id">
                         {{ org.name }}
                       </option>
                     </select>
-
                     <button
-                      class="save-org-button"
+                      class="rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                       :disabled="updatingOrg"
                       @click="updateUserOrg(user.id)"
                     >
@@ -200,7 +265,7 @@
                     </button>
 
                     <button
-                      class="cancel-org-button"
+                      class="rounded-md bg-slate-600 px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                       :disabled="updatingOrg"
                       @click="cancelEditingOrg"
                     >
@@ -208,8 +273,8 @@
                     </button>
                   </div>
 
-                  <div v-else class="org-display">
-                    <span class="org-label">
+                  <div v-else class="flex items-center gap-3">
+                    <span class="text-slate-300">
                       {{
                         user.orgId === null
                           ? 'Admin'
@@ -219,7 +284,7 @@
 
                     <button
                       v-if="user.orgId !== null && !user.isArchived"
-                      class="edit-org-button"
+                      class="rounded-md bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
                       :disabled="editingUserId !== null"
                       @click="startEditingOrg(user.id, user.orgId)"
                     >
@@ -228,17 +293,28 @@
                   </div>
                 </td>
 
-                <td>
-                  <span class="status-badge" :class="user.isArchived ? 'archived' : 'active'">
-                    <span class="status-dot"></span>
+                <td
+                  class="border-t border-slate-700 px-6 py-[18px] text-sm max-sm:px-3 max-sm:py-3.5"
+                >
+                  <span
+                    class="inline-flex items-center gap-[7px] rounded-full px-2.5 py-1.5 text-xs font-semibold"
+                    :class="
+                      user.isArchived
+                        ? 'bg-slate-600 text-slate-300'
+                        : 'bg-[#14532d55] text-green-300'
+                    "
+                  >
+                    <span class="h-[7px] w-[7px] rounded-full bg-current"></span>
                     {{ user.isArchived ? 'Archived' : 'Active' }}
                   </span>
                 </td>
 
-                <td>
+                <td
+                  class="border-t border-slate-700 px-6 py-[18px] text-sm max-sm:px-3 max-sm:py-3.5"
+                >
                   <button
                     v-if="user.orgId !== null"
-                    class="archive-button"
+                    class="rounded-lg bg-blue-600 px-4 py-[9px] text-[13px] font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-400"
                     :disabled="user.isArchived || archivingUserId !== null"
                     @click="archiveUser(user.id, user.email)"
                   >
@@ -251,7 +327,7 @@
                     }}
                   </button>
 
-                  <span v-else class="no-action">—</span>
+                  <span v-else class="text-slate-500">—</span>
                 </td>
               </tr>
             </tbody>
@@ -261,318 +337,3 @@
     </div>
   </main>
 </template>
-
-<style scoped>
-  .admin-page {
-    min-height: 100vh;
-    background: #0f172a;
-    color: #f8fafc;
-    padding: 48px 24px;
-  }
-
-  .dashboard {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .page-header {
-    margin-bottom: 32px;
-  }
-
-  .eyebrow {
-    color: #60a5fa;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    margin-bottom: 12px;
-  }
-
-  h1 {
-    font-size: 32px;
-    font-weight: 700;
-    margin: 0 0 8px;
-  }
-
-  .subtitle {
-    color: #94a3b8;
-    font-size: 15px;
-  }
-
-  .users-card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 14px;
-    overflow: hidden;
-  }
-
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 24px;
-    gap: 16px;
-  }
-
-  .card-header h2 {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0 0 6px;
-  }
-
-  .card-header p {
-    color: #94a3b8;
-    font-size: 13px;
-    margin: 0;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .user-count {
-    color: #cbd5e1;
-    background: #334155;
-    border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-
-  .add-button {
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 7px;
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .add-button:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
-
-  .add-button:disabled {
-    background: #475569;
-    color: #94a3b8;
-    cursor: not-allowed;
-  }
-
-  .add-user-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding: 20px 24px;
-    border-top: 1px solid #334155;
-  }
-
-  .add-user-form input,
-  .add-user-form select {
-    flex: 1 1 180px;
-    min-width: 0;
-    background: #0f172a;
-    border: 1px solid #475569;
-    border-radius: 7px;
-    padding: 10px 12px;
-    color: #f8fafc;
-  }
-
-  .add-user-form input::placeholder {
-    color: #94a3b8;
-  }
-
-  .add-user-form input:focus,
-  .add-user-form select:focus {
-    outline: none;
-    border-color: #60a5fa;
-  }
-
-  .table-container {
-    overflow-x: auto;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    text-align: left;
-  }
-
-  thead {
-    background: #172235;
-  }
-
-  th {
-    color: #94a3b8;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 16px 24px;
-  }
-
-  td {
-    padding: 18px 24px;
-    border-top: 1px solid #334155;
-    font-size: 14px;
-  }
-
-  tbody tr:hover {
-    background: #263449;
-  }
-
-  .name-cell {
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .email-cell {
-    color: #cbd5e1;
-  }
-
-  .org-label {
-    color: #cbd5e1;
-  }
-
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 6px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .status-badge.active {
-    color: #86efac;
-    background: #14532d55;
-  }
-
-  .status-badge.archived {
-    color: #cbd5e1;
-    background: #475569;
-  }
-
-  .status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  .archive-button {
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 7px;
-    padding: 9px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .archive-button:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
-
-  .archive-button:disabled {
-    background: #475569;
-    color: #94a3b8;
-    cursor: not-allowed;
-  }
-
-  .no-action {
-    color: #64748b;
-  }
-
-  .message {
-    padding: 24px;
-    color: #94a3b8;
-  }
-
-  .message.error {
-    color: #fca5a5;
-  }
-
-  @media (max-width: 640px) {
-    .admin-page {
-      padding: 24px 12px;
-    }
-
-    .card-header {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-
-    th,
-    td {
-      padding: 14px 12px;
-    }
-  }
-
-  .org-display {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .org-editor {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .org-input {
-    width: 180px;
-    padding: 8px 10px;
-    background: #0f172a;
-    border: 1px solid #475569;
-    border-radius: 6px;
-    color: #f8fafc;
-    font-size: 13px;
-  }
-
-  .edit-org-button,
-  .save-org-button,
-  .cancel-org-button {
-    border: none;
-    border-radius: 6px;
-    padding: 7px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .edit-org-button {
-    background: #334155;
-    color: #e2e8f0;
-  }
-
-  .save-org-button {
-    background: #2563eb;
-    color: white;
-  }
-
-  .cancel-org-button {
-    background: #475569;
-    color: white;
-  }
-
-  .edit-org-button:hover:not(:disabled) {
-    background: #475569;
-  }
-
-  .save-org-button:hover:not(:disabled) {
-    background: #1d4ed8;
-  }
-
-  .edit-org-button:disabled,
-  .save-org-button:disabled,
-  .cancel-org-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-</style>
